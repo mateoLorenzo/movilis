@@ -10,6 +10,8 @@
     "mobile": "npm run start --workspace @carpooling/mobile",
     "mobile:ios": "npm run ios --workspace @carpooling/mobile",
     "mobile:android": "npm run android --workspace @carpooling/mobile",
-    "mobile:web": "npm run web --workspace @carpooling/mobile"
+    "mobile:web": "npm run web --workspace @carpooling/mobile",
+    "back": "npm run start --workspace @carpooling/back",
+    "back:dev": "npm run dev --workspace @carpooling/back"
   }
 }
