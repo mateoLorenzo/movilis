@@ -12,6 +12,7 @@ export const authConfig = {
     30 * 24 * 60 * 60,
   ),
   otpTtlSeconds: readPositiveIntEnv('OTP_TTL_SECONDS', 10 * 60),
+  exposeDevOtpCode: process.env.AUTH_EXPOSE_DEV_OTP_CODE === 'true',
 }
 
 declare module '@fastify/jwt' {

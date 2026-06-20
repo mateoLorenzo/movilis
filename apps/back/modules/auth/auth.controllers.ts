@@ -25,7 +25,7 @@ export async function requestOtp(
 
     return reply.send({
       expiresInSeconds: authConfig.otpTtlSeconds,
-      ...(process.env.NODE_ENV !== 'production' ? { devCode: otp.code } : {}),
+      ...(authConfig.exposeDevOtpCode ? { devCode: otp.code } : {}),
     })
   } catch (error) {
     return sendAuthError(reply, error)
