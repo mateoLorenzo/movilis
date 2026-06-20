@@ -1,3 +1,4 @@
+export * from './auth.js'
 export * from './cities.js'
 export * from './enums.js'
 export * from './notifications.js'
