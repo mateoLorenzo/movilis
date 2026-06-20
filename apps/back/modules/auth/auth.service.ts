@@ -8,6 +8,9 @@ const maxOtpRequestsPerWindow = 3
 const otpRequestWindowMs = 15 * 60 * 1000
 const maxOtpAttempts = 3
 
+// Transactions support DB query methods but do not expose the root pool client.
+type DbClient = Omit<Db, '$client'>
+
 export class AuthError extends Error {
   constructor(
     message: string,
@@ -136,43 +139,54 @@ export const authService = {
   async refresh(db: Db, refreshToken: string) {
     const now = new Date()
     const tokenHash = hashToken(refreshToken)
-    const session = await db.query.authSessions.findFirst({
-      where: (authSessions, { eq }) =>
-        eq(authSessions.refreshTokenHash, tokenHash),
+
+    return db.transaction(async (tx) => {
+      const session = await tx.query.authSessions.findFirst({
+        where: (authSessions, { eq }) =>
+          eq(authSessions.refreshTokenHash, tokenHash),
+      })
+
+      if (!session) {
+        throw new AuthError('Invalid refresh token', 401)
+      }
+
+      if (session.revokedAt) {
+        await revokeAllUserSessions(tx, session.userId)
+        throw new AuthError('Invalid refresh token', 401)
+      }
+
+      if (session.expiresAt <= now) {
+        await revokeSession(tx, session.id)
+        throw new AuthError('Invalid refresh token', 401)
+      }
+
+      const user = await findActiveUserById(tx, session.userId)
+
+      if (!user) {
+        await revokeAllUserSessions(tx, session.userId)
+        throw new AuthError('Invalid refresh token', 401)
+      }
+
+      const nextSession = createSessionValues(user.id)
+      const [revokedSession] = await tx
+        .update(authSessions)
+        .set({ revokedAt: now, replacedBySessionId: nextSession.session.id })
+        .where(
+          and(eq(authSessions.id, session.id), isNull(authSessions.revokedAt)),
+        )
+        .returning({ id: authSessions.id })
+
+      if (!revokedSession) {
+        throw new AuthError('Invalid refresh token', 401)
+      }
+
+      await tx.insert(authSessions).values(nextSession.session)
+
+      return { user, refreshToken: nextSession.refreshToken }
     })
-
-    if (!session) {
-      throw new AuthError('Invalid refresh token', 401)
-    }
-
-    if (session.revokedAt) {
-      await revokeAllUserSessions(db, session.userId)
-      throw new AuthError('Invalid refresh token', 401)
-    }
-
-    if (session.expiresAt <= now) {
-      await revokeSession(db, session.id)
-      throw new AuthError('Invalid refresh token', 401)
-    }
-
-    const user = await findActiveUserById(db, session.userId)
-
-    if (!user) {
-      await revokeAllUserSessions(db, session.userId)
-      throw new AuthError('Invalid refresh token', 401)
-    }
-
-    const nextSession = createSessionValues(user.id)
-    await db.insert(authSessions).values(nextSession.session)
-    await db
-      .update(authSessions)
-      .set({ revokedAt: now, replacedBySessionId: nextSession.session.id })
-      .where(eq(authSessions.id, session.id))
-
-    return { user, refreshToken: nextSession.refreshToken }
   },
 
-  async logout(db: Db, refreshToken: string) {
+  async logout(db: DbClient, refreshToken: string) {
     const session = await db.query.authSessions.findFirst({
       where: (authSessions, { eq }) =>
         eq(authSessions.refreshTokenHash, hashToken(refreshToken)),
@@ -210,28 +224,28 @@ function createSessionValues(userId: string) {
   }
 }
 
-async function findActiveUserByPhoneNumber(db: Db, phoneNumber: string) {
+async function findActiveUserByPhoneNumber(db: DbClient, phoneNumber: string) {
   return db.query.users.findFirst({
     where: (users, { and, eq, isNull }) =>
       and(eq(users.phoneNumber, phoneNumber), isNull(users.deletedAt)),
   })
 }
 
-async function findActiveUserById(db: Db, id: string) {
+async function findActiveUserById(db: DbClient, id: string) {
   return db.query.users.findFirst({
     where: (users, { and, eq, isNull }) =>
       and(eq(users.id, id), isNull(users.deletedAt)),
   })
 }
 
-async function revokeSession(db: Db, sessionId: string) {
+async function revokeSession(db: DbClient, sessionId: string) {
   await db
     .update(authSessions)
     .set({ revokedAt: new Date() })
     .where(eq(authSessions.id, sessionId))
 }
 
-async function revokeAllUserSessions(db: Db, userId: string) {
+async function revokeAllUserSessions(db: DbClient, userId: string) {
   await db
     .update(authSessions)
     .set({ revokedAt: new Date() })
