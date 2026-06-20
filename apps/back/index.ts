@@ -1,15 +1,26 @@
+import 'dotenv/config'
+
 import fastify from 'fastify'
 
-const server = fastify()
+import { registerDb } from './db.js'
+import usersRoutes from './modules/users/users.routes.js'
 
-server.get('/ping', async (request, reply) => {
-  return 'pong\n'
+const server = fastify({
+  logger: true,
 })
 
-server.listen({ port: 8080 }, (err, address) => {
-  if (err) {
-    console.error(err)
+async function start() {
+  try {
+    await registerDb(server)
+
+    server.register(usersRoutes, { prefix: '/users' })
+
+    const address = await server.listen({ port: 8080 })
+    server.log.info(`Server listening at ${address}`)
+  } catch (error) {
+    server.log.error(error)
     process.exit(1)
   }
-  console.log(`Server listening at ${address}`)
-})
+}
+
+await start()
