@@ -12,6 +12,7 @@
     "mobile:android": "npm run android --workspace @carpooling/mobile",
     "mobile:web": "npm run web --workspace @carpooling/mobile",
     "back": "npm run start --workspace @carpooling/back",
-    "back:dev": "npm run dev --workspace @carpooling/back"
+    "back:dev": "npm run dev --workspace @carpooling/back",
+    "db:migrate": "npm run migrate --workspace @carpooling/db"
   }
 }
