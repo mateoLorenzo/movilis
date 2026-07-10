@@ -1,4 +1,5 @@
-import type { NextTrip, TripListing } from "@/screens/home/interfaces";
+import type { NextTrip } from "@/screens/home/interfaces";
+import type { TripListing } from "@/types/trip";
 
 // Mock data until the API layer is in place
 export const mockUser = {

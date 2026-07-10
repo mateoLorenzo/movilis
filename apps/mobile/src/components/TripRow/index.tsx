@@ -4,8 +4,8 @@ import { StyleSheet, Text, View } from "react-native";
 import ArrowRightIcon from "@/assets/svg/arrow-right.svg";
 import NavigationIcon from "@/assets/svg/navigation.svg";
 import StarIcon from "@/assets/svg/star.svg";
-import { InitialsAvatar } from "@/screens/home/components/InitialsAvatar";
-import type { TripListing } from "@/screens/home/interfaces";
+import { InitialsAvatar } from "@/components/InitialsAvatar";
+import type { TripListing } from "@/types/trip";
 import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
 
@@ -15,6 +15,8 @@ interface TripRowProps {
 
 const TripRow = ({ trip }: TripRowProps) => {
   const { t } = useTranslation();
+
+  const isLastSeat = trip.seatsAvailable === 1;
 
   return (
     <View style={styles.row}>
@@ -30,9 +32,15 @@ const TripRow = ({ trip }: TripRowProps) => {
           <Text style={styles.routeText}>{trip.to}</Text>
         </View>
         <Text style={styles.meta}>
-          {trip.datetime} ·{" "}
-          {t("home.trips.seats", { count: trip.seatsAvailable })}
+          {isLastSeat
+            ? trip.datetime
+            : `${trip.datetime} · ${t("trip.seats", {
+                count: trip.seatsAvailable,
+              })}`}
         </Text>
+        {isLastSeat && (
+          <Text style={styles.lastSeat}>{t("trip.lastSeat")}</Text>
+        )}
         <View style={styles.driverLine}>
           <StarIcon width={11} height={11} color={colors.neutral.textPrimary} />
           <Text style={styles.driverText}>
@@ -47,14 +55,14 @@ const TripRow = ({ trip }: TripRowProps) => {
               color={colors.neutral.textPrimary}
             />
             <Text style={styles.proximityText}>
-              {t("home.trips.proximity", { km: trip.proximityKm })}
+              {t("trip.proximity", { km: trip.proximityKm })}
             </Text>
           </View>
         )}
       </View>
       <View style={styles.priceCol}>
         <Text style={styles.price}>{trip.price}</Text>
-        <Text style={styles.perSeat}>{t("home.trips.perSeat")}</Text>
+        <Text style={styles.perSeat}>{t("trip.perSeat")}</Text>
       </View>
     </View>
   );
@@ -84,6 +92,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 13,
     color: colors.neutral.textSecondary,
+  },
+  lastSeat: {
+    fontFamily: fonts.semiBold,
+    fontSize: 13,
+    color: colors.feedback.warning,
   },
   driverLine: {
     flexDirection: "row",

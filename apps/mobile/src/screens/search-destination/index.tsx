@@ -30,7 +30,7 @@ const normalize = (value: string): string =>
 
 const SearchDestination = () => {
   const { t } = useTranslation();
-  const { back } = useRouter();
+  const { back, push } = useRouter();
   const origin = useSearchStore((state) => state.origin);
   const setDestination = useSearchStore((state) => state.setDestination);
   const [query, setQuery] = useState("");
@@ -49,7 +49,7 @@ const SearchDestination = () => {
 
   const handleSelect = (destination: Destination) => {
     setDestination(destination.name);
-    back();
+    push("/search-results");
   };
 
   return (

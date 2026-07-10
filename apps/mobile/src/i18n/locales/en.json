@@ -41,12 +41,22 @@
       "title": "Trips to your destinations",
       "seeAll": "See all",
       "emptyTitle": "No trips for now",
-      "emptyBody": "No trips to your favorite destinations yet. When someone publishes one, you'll see it here.",
-      "seats_one": "{{count}} seat available",
-      "seats_other": "{{count}} seats available",
-      "perSeat": "per seat",
-      "proximity": "Departs {{km}} km from your location"
+      "emptyBody": "No trips to your favorite destinations yet. When someone publishes one, you'll see it here."
     }
+  },
+  "trip": {
+    "seats_one": "{{count}} seat available",
+    "seats_other": "{{count}} seats available",
+    "perSeat": "per seat",
+    "proximity": "Departs {{km}} km from your location",
+    "lastSeat": "Last seat"
+  },
+  "searchResults": {
+    "from": "From {{address}}",
+    "filters": "Filters",
+    "upToKm": "Up to {{km}} km",
+    "count_one": "{{count}} trip found",
+    "count_other": "{{count}} trips found"
   },
   "tabs": {
     "search": "Search",

@@ -19,9 +19,9 @@ import PlusIcon from "@/assets/svg/plus.svg";
 import SearchIcon from "@/assets/svg/search.svg";
 import { Button } from "@/components/Button";
 import { DevMenu } from "@/components/DevMenu";
-import { InitialsAvatar } from "@/screens/home/components/InitialsAvatar";
+import { InitialsAvatar } from "@/components/InitialsAvatar";
 import { NextTripCard } from "@/screens/home/components/NextTripCard";
-import { TripRow } from "@/screens/home/components/TripRow";
+import { TripRow } from "@/components/TripRow";
 import {
   mockFavoriteDestinations,
   mockNextTrip,

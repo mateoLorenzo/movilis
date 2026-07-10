@@ -4,7 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ArrowRightIcon from "@/assets/svg/arrow-right.svg";
 import MessageCircleIcon from "@/assets/svg/message-circle.svg";
 import StarIcon from "@/assets/svg/star.svg";
-import { InitialsAvatar } from "@/screens/home/components/InitialsAvatar";
+import { InitialsAvatar } from "@/components/InitialsAvatar";
 import type { NextTrip } from "@/screens/home/interfaces";
 import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
