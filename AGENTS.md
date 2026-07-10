@@ -5,8 +5,10 @@ npm workspaces monorepo.
 ```
 carpooling/
 ├── apps/
+│   ├── back/        # Backend code (NodeJS w/Fastify). See apps/back/AGENTS.md
 │   └── mobile/      # Expo app (React Native). See apps/mobile/AGENTS.md
 ├── packages/
+│   ├── db/          # Database schema and migrations (Drizzle ORM)
 │   └── shared/      # Code shared front <-> back (DTOs, contracts)
 └── package.json     # workspace root
 ```
