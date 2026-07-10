@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
@@ -47,6 +48,7 @@ const FeatureRow = ({ icon: Icon, title, body }: FeatureRowProps) => (
 
 const Welcome = () => {
   const { t } = useTranslation();
+  const { replace } = useRouter();
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -72,7 +74,7 @@ const Welcome = () => {
           />
         </View>
         <View style={styles.spacer} />
-        <Button label={t("welcome.cta")} />
+        <Button label={t("welcome.cta")} onPress={() => replace("/home")} />
         <Text style={styles.note}>{t("welcome.note")}</Text>
       </View>
     </SafeAreaView>

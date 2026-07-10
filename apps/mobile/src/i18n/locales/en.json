@@ -18,5 +18,34 @@
     },
     "cta": "Get started",
     "note": "You don't need an account to browse trips"
+  },
+  "home": {
+    "greeting": "Good morning,",
+    "title": "Where are you going?",
+    "notifications": "Notifications",
+    "searchPlaceholder": "Search destination",
+    "searchCta": "Search trips",
+    "nextTrip": {
+      "title": "Your next trip",
+      "confirmed": "Confirmed",
+      "chat": "Open WhatsApp chat"
+    },
+    "favorites": {
+      "title": "Your favorite destinations",
+      "add": "Add"
+    },
+    "trips": {
+      "title": "Trips to your destinations",
+      "seeAll": "See all",
+      "seats_one": "{{count}} seat available",
+      "seats_other": "{{count}} seats available",
+      "perSeat": "per seat",
+      "proximity": "Departs {{km}} km from your location"
+    },
+    "tabs": {
+      "search": "Search",
+      "publish": "Publish",
+      "profile": "Profile"
+    }
   }
 }

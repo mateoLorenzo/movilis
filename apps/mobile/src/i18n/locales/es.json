@@ -18,5 +18,34 @@
     },
     "cta": "Empezar",
     "note": "No necesitás cuenta para mirar los viajes"
+  },
+  "home": {
+    "greeting": "Buen día,",
+    "title": "¿A dónde viajás?",
+    "notifications": "Notificaciones",
+    "searchPlaceholder": "Buscar destino",
+    "searchCta": "Buscar viajes",
+    "nextTrip": {
+      "title": "Tu próximo viaje",
+      "confirmed": "Confirmado",
+      "chat": "Abrir chat de WhatsApp"
+    },
+    "favorites": {
+      "title": "Tus destinos favoritos",
+      "add": "Agregar"
+    },
+    "trips": {
+      "title": "Viajes a tus destinos",
+      "seeAll": "Ver todo",
+      "seats_one": "{{count}} asiento libre",
+      "seats_other": "{{count}} asientos libres",
+      "perSeat": "por asiento",
+      "proximity": "Sale a {{km}} km de tu ubicación"
+    },
+    "tabs": {
+      "search": "Buscar",
+      "publish": "Publicar",
+      "profile": "Perfil"
+    }
   }
 }
