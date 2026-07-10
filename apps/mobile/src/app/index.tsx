@@ -1,9 +1,10 @@
+import { fonts } from "@/theme/fonts";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text>Carpooling</Text>
+      <Text style={styles.title}>Mateo</Text>
     </View>
   );
 }
@@ -13,5 +14,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  title: {
+    fontFamily: fonts.extraBold,
+    fontSize: 24,
   },
 });

@@ -8,9 +8,11 @@
     "scheme": "carpooling",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.movilis.app"
     },
     "android": {
+      "package": "com.movilis.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -25,6 +27,18 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Figtree-Regular.ttf",
+            "./assets/fonts/Figtree-Medium.ttf",
+            "./assets/fonts/Figtree-SemiBold.ttf",
+            "./assets/fonts/Figtree-Bold.ttf",
+            "./assets/fonts/Figtree-ExtraBold.ttf"
+          ]
+        }
+      ],
       [
         "expo-splash-screen",
         {
