@@ -40,6 +40,8 @@
     "trips": {
       "title": "Viajes a tus destinos",
       "seeAll": "Ver todo",
+      "emptyTitle": "Sin viajes por ahora",
+      "emptyBody": "Todavía no hay viajes hacia tus destinos favoritos. Cuando alguien publique uno, lo vas a ver acá.",
       "seats_one": "{{count}} asiento libre",
       "seats_other": "{{count}} asientos libres",
       "perSeat": "por asiento",

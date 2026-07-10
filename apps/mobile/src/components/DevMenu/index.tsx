@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BottomSheetModal } from "@/components/BottomSheetModal";
+import type { DevListVariant } from "@/store/dev.store";
 import { useDevMocksStore } from "@/store/dev.store";
 import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
@@ -10,6 +11,18 @@ import { fonts } from "@/theme/fonts";
 const NEXT_TRIP_OPTIONS: { label: string; value: boolean }[] = [
   { label: "With next trip", value: true },
   { label: "Without next trip", value: false },
+];
+
+const FAVORITES_OPTIONS: { label: string; value: DevListVariant }[] = [
+  { label: "Empty", value: "empty" },
+  { label: "One chip", value: "one" },
+  { label: "Many chips", value: "many" },
+];
+
+const TRIPS_OPTIONS: { label: string; value: DevListVariant }[] = [
+  { label: "Empty", value: "empty" },
+  { label: "One trip", value: "one" },
+  { label: "Many trips", value: "many" },
 ];
 
 interface DevMenuProps {
@@ -62,6 +75,12 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
 
   const hasNextTrip = useDevMocksStore((state) => state.hasNextTrip);
   const setHasNextTrip = useDevMocksStore((state) => state.setHasNextTrip);
+  const favoritesVariant = useDevMocksStore((state) => state.favoritesVariant);
+  const setFavoritesVariant = useDevMocksStore(
+    (state) => state.setFavoritesVariant,
+  );
+  const tripsVariant = useDevMocksStore((state) => state.tripsVariant);
+  const setTripsVariant = useDevMocksStore((state) => state.setTripsVariant);
 
   if (!__DEV__) {
     return null;
@@ -87,6 +106,20 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
           options={NEXT_TRIP_OPTIONS}
           selected={hasNextTrip}
           onSelect={setHasNextTrip}
+        />
+
+        <ChipSection
+          label="Favorite destinations"
+          options={FAVORITES_OPTIONS}
+          selected={favoritesVariant}
+          onSelect={setFavoritesVariant}
+        />
+
+        <ChipSection
+          label="Trips to destinations"
+          options={TRIPS_OPTIONS}
+          selected={tripsVariant}
+          onSelect={setTripsVariant}
         />
       </BottomSheetModal>
     </>

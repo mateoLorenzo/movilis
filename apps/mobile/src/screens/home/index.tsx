@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { SvgProps } from "react-native-svg";
 
 import BellIcon from "@/assets/svg/bell.svg";
+import CarNavigationIcon from "@/assets/svg/car-navigation.svg";
 import MapPinIcon from "@/assets/svg/map-pin.svg";
 import NavigationIcon from "@/assets/svg/navigation.svg";
 import PlusIcon from "@/assets/svg/plus.svg";
@@ -86,6 +87,22 @@ const Home = () => {
   const origin = useSearchStore((state) => state.origin);
   const destination = useSearchStore((state) => state.destination);
   const hasNextTrip = useDevMocksStore((state) => state.hasNextTrip);
+  const favoritesVariant = useDevMocksStore((state) => state.favoritesVariant);
+  const tripsVariant = useDevMocksStore((state) => state.tripsVariant);
+
+  const favoriteDestinations =
+    favoritesVariant === "empty"
+      ? []
+      : favoritesVariant === "one"
+        ? mockFavoriteDestinations.slice(0, 1)
+        : mockFavoriteDestinations;
+
+  const trips =
+    tripsVariant === "empty"
+      ? []
+      : tripsVariant === "one"
+        ? mockTrips.slice(0, 1)
+        : mockTrips;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -147,7 +164,7 @@ const Home = () => {
             style={styles.chipsScroll}
             contentContainerStyle={styles.chipsRow}
           >
-            {mockFavoriteDestinations.map((destination) => (
+            {favoriteDestinations.map((destination) => (
               <DestinationChip key={destination} label={destination} />
             ))}
             <TouchableOpacity
@@ -172,22 +189,42 @@ const Home = () => {
         <View style={styles.tripsSection}>
           <View style={styles.tripsHeader}>
             <Text style={styles.sectionTitle}>{t("home.trips.title")}</Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={t("home.trips.seeAll")}
-            >
-              <Text style={styles.seeAll}>{t("home.trips.seeAll")}</Text>
-            </TouchableOpacity>
+            {trips.length > 0 && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("home.trips.seeAll")}
+              >
+                <Text style={styles.seeAll}>{t("home.trips.seeAll")}</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View>
-            {mockTrips.map((trip, index) => (
-              <View key={trip.id}>
-                {index > 0 && <View style={styles.rowDivider} />}
-                <TripRow trip={trip} />
+          {trips.length > 0 ? (
+            <View>
+              {trips.map((trip, index) => (
+                <View key={trip.id}>
+                  {index > 0 && <View style={styles.rowDivider} />}
+                  <TripRow trip={trip} />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.tripsEmptyCard}>
+              <View style={styles.tripsEmptyIcon}>
+                <CarNavigationIcon
+                  width={32}
+                  height={32}
+                  color={colors.neutral.textPrimary}
+                />
               </View>
-            ))}
-          </View>
+              <Text style={styles.tripsEmptyTitle}>
+                {t("home.trips.emptyTitle")}
+              </Text>
+              <Text style={styles.tripsEmptyBody}>
+                {t("home.trips.emptyBody")}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
       <TabBar activeTab="search" />
@@ -341,6 +378,36 @@ const styles = StyleSheet.create({
   rowDivider: {
     height: 1,
     backgroundColor: colors.neutral.divider,
+  },
+  tripsEmptyCard: {
+    marginTop: 12,
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 16,
+    backgroundColor: colors.neutral.surfaceSubtle,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+  },
+  tripsEmptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  tripsEmptyTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: 15,
+    color: colors.neutral.textPrimary,
+    textAlign: "center",
+  },
+  tripsEmptyBody: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.neutral.textSecondary,
+    textAlign: "center",
   },
 });
 
