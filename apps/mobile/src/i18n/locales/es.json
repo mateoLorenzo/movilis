@@ -1,0 +1,22 @@
+{
+  "welcome": {
+    "title": "Viajá compartiendo,\nahorrá en cada viaje",
+    "subtitle": "Conectamos personas que van al mismo lugar. Sin comisiones, sin vueltas.",
+    "features": {
+      "search": {
+        "title": "Encontrá viajes a tu destino",
+        "body": "Buscá quién ya va para donde vas vos."
+      },
+      "publish": {
+        "title": "Publicá tu viaje y ahorrá nafta",
+        "body": "Sumá pasajeros y dividí los gastos."
+      },
+      "whatsapp": {
+        "title": "Coordiná por WhatsApp",
+        "body": "El pago y el encuentro los arreglás directo con el conductor."
+      }
+    },
+    "cta": "Empezar",
+    "note": "No necesitás cuenta para mirar los viajes"
+  }
+}
