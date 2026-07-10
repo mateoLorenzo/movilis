@@ -145,7 +145,10 @@ const Home = () => {
               isPlaceholder={!destination}
               onPress={() => push("/search-destination")}
             />
-            <Button label={t("home.searchCta")} />
+            <Button
+              label={t("home.searchCta")}
+              onPress={() => push("/search-destination")}
+            />
           </View>
         </View>
 
