@@ -2,18 +2,15 @@
   "name": "movilis",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "mobile": "npm run start --workspace @movilis/mobile",
-    "mobile:ios": "npm run ios --workspace @movilis/mobile",
-    "mobile:android": "npm run android --workspace @movilis/mobile",
-    "mobile:web": "npm run web --workspace @movilis/mobile",
-    "back": "npm run start --workspace @carpooling/back",
-    "back:dev": "npm run dev --workspace @carpooling/back",
-    "db:generate": "npm run generate --workspace @carpooling/db -- --name=$npm_config_name",
-    "db:migrate": "npm run migrate --workspace @carpooling/db"
-  }
+    "mobile": "pnpm --filter @movilis/mobile start",
+    "mobile:ios": "pnpm --filter @movilis/mobile ios",
+    "mobile:android": "pnpm --filter @movilis/mobile android",
+    "mobile:web": "pnpm --filter @movilis/mobile web",
+    "back": "pnpm --filter @carpooling/back start",
+    "back:dev": "pnpm --filter @carpooling/back dev",
+    "db:generate": "pnpm --filter @carpooling/db generate",
+    "db:migrate": "pnpm --filter @carpooling/db migrate"
+  },
+  "packageManager": "pnpm@11.0.9"
 }
