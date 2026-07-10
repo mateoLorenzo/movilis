@@ -1,4 +1,7 @@
 {
+  "common": {
+    "close": "Cerrar"
+  },
   "welcome": {
     "title": "Viajá compartiendo,\nahorrá en cada viaje",
     "subtitle": "Conectamos personas que van al mismo lugar. Sin comisiones, sin vueltas.",

@@ -17,6 +17,7 @@ import NavigationIcon from "@/assets/svg/navigation.svg";
 import PlusIcon from "@/assets/svg/plus.svg";
 import SearchIcon from "@/assets/svg/search.svg";
 import { Button } from "@/components/Button";
+import { DevMenu } from "@/components/DevMenu";
 import { InitialsAvatar } from "@/screens/home/components/InitialsAvatar";
 import { NextTripCard } from "@/screens/home/components/NextTripCard";
 import { TabBar } from "@/screens/home/components/TabBar";
@@ -27,6 +28,7 @@ import {
   mockTrips,
   mockUser,
 } from "@/screens/home/constants";
+import { useDevMocksStore } from "@/store/dev.store";
 import { useSearchStore } from "@/store/search.store";
 import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
@@ -83,6 +85,7 @@ const Home = () => {
   const { push } = useRouter();
   const origin = useSearchStore((state) => state.origin);
   const destination = useSearchStore((state) => state.destination);
+  const hasNextTrip = useDevMocksStore((state) => state.hasNextTrip);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -129,10 +132,12 @@ const Home = () => {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("home.nextTrip.title")}</Text>
-          <NextTripCard trip={mockNextTrip} />
-        </View>
+        {hasNextTrip && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t("home.nextTrip.title")}</Text>
+            <NextTripCard trip={mockNextTrip} />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("home.favorites.title")}</Text>
@@ -181,6 +186,7 @@ const Home = () => {
         </View>
       </ScrollView>
       <TabBar activeTab="search" />
+      <DevMenu bottomOffset={76} />
     </SafeAreaView>
   );
 };

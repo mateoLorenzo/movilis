@@ -1,4 +1,7 @@
 {
+  "common": {
+    "close": "Close"
+  },
   "welcome": {
     "title": "Share the ride,\nsave on every trip",
     "subtitle": "We connect people going to the same place. No fees, no hassle.",
