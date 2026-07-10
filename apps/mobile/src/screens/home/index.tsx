@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 12,
     paddingHorizontal: 24,
-    paddingBottom: 36,
+    paddingBottom: process.env.EXPO_OS === "android" ? 120 : 36,
     gap: 32,
   },
   header: {
