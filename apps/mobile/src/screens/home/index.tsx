@@ -141,7 +141,12 @@ const Home = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("home.favorites.title")}</Text>
-          <View style={styles.chipsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipsScroll}
+            contentContainerStyle={styles.chipsRow}
+          >
             {mockFavoriteDestinations.map((destination) => (
               <DestinationChip key={destination} label={destination} />
             ))}
@@ -161,7 +166,7 @@ const Home = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
 
         <View style={styles.tripsSection}>
@@ -290,9 +295,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: colors.neutral.textPrimary,
   },
+  chipsScroll: {
+    marginHorizontal: -24,
+  },
   chipsRow: {
     flexDirection: "row",
     gap: 8,
+    paddingHorizontal: 24,
   },
   chip: {
     flexDirection: "row",

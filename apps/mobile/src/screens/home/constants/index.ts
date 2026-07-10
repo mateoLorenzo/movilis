@@ -15,7 +15,12 @@ export const mockNextTrip: NextTrip = {
   rating: "4.8",
 };
 
-export const mockFavoriteDestinations = ["Mar del Plata", "Córdoba"];
+export const mockFavoriteDestinations = [
+  "Mar del Plata",
+  "Córdoba",
+  "Rosario",
+  "Bariloche",
+];
 
 export const mockTrips: TripListing[] = [
   {
