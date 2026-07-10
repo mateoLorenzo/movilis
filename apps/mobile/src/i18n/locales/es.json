@@ -46,12 +46,20 @@
       "seats_other": "{{count}} asientos libres",
       "perSeat": "por asiento",
       "proximity": "Sale a {{km}} km de tu ubicación"
-    },
-    "tabs": {
-      "search": "Buscar",
-      "publish": "Publicar",
-      "profile": "Perfil"
     }
+  },
+  "tabs": {
+    "search": "Buscar",
+    "publish": "Publicar",
+    "profile": "Perfil"
+  },
+  "publish": {
+    "title": "Publicar",
+    "comingSoon": "Muy pronto vas a poder publicar tu viaje y sumar pasajeros."
+  },
+  "profile": {
+    "title": "Perfil",
+    "comingSoon": "Muy pronto vas a poder ver y editar tu perfil."
   },
   "searchDestination": {
     "popular": "Destinos populares",

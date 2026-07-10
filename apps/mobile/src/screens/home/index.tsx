@@ -21,7 +21,6 @@ import { Button } from "@/components/Button";
 import { DevMenu } from "@/components/DevMenu";
 import { InitialsAvatar } from "@/screens/home/components/InitialsAvatar";
 import { NextTripCard } from "@/screens/home/components/NextTripCard";
-import { TabBar } from "@/screens/home/components/TabBar";
 import { TripRow } from "@/screens/home/components/TripRow";
 import {
   mockFavoriteDestinations,
@@ -109,6 +108,7 @@ const Home = () => {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -230,7 +230,6 @@ const Home = () => {
           )}
         </View>
       </ScrollView>
-      <TabBar activeTab="search" />
       <DevMenu bottomOffset={76} />
     </SafeAreaView>
   );
