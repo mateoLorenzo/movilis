@@ -47,5 +47,11 @@
       "publish": "Publicar",
       "profile": "Perfil"
     }
+  },
+  "searchDestination": {
+    "popular": "Destinos populares",
+    "noMatches": "No encontramos destinos para \"{{query}}\"",
+    "back": "Volver",
+    "clear": "Borrar búsqueda"
   }
 }

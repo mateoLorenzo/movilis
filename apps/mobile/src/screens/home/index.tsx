@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -26,6 +27,7 @@ import {
   mockTrips,
   mockUser,
 } from "@/screens/home/constants";
+import { useSearchStore } from "@/store/search.store";
 import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
 
@@ -78,6 +80,9 @@ const DestinationChip = ({ label }: DestinationChipProps) => (
 
 const Home = () => {
   const { t } = useTranslation();
+  const { push } = useRouter();
+  const origin = useSearchStore((state) => state.origin);
+  const destination = useSearchStore((state) => state.destination);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -113,11 +118,12 @@ const Home = () => {
         <View style={styles.searchSection}>
           <Text style={styles.sectionTitleLarge}>{t("home.title")}</Text>
           <View style={styles.fields}>
-            <SearchPill icon={NavigationIcon} text={mockUser.originAddress} />
+            <SearchPill icon={NavigationIcon} text={origin} />
             <SearchPill
               icon={SearchIcon}
-              text={t("home.searchPlaceholder")}
-              isPlaceholder
+              text={destination ?? t("home.searchPlaceholder")}
+              isPlaceholder={!destination}
+              onPress={() => push("/search-destination")}
             />
             <Button label={t("home.searchCta")} />
           </View>

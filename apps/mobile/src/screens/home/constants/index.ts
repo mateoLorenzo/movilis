@@ -4,7 +4,6 @@ import type { NextTrip, TripListing } from "@/screens/home/interfaces";
 export const mockUser = {
   name: "Mateo",
   initials: "M",
-  originAddress: "Jorge Newbery 2484",
 } as const;
 
 export const mockNextTrip: NextTrip = {
