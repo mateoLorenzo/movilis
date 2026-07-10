@@ -1,0 +1,22 @@
+{
+  "welcome": {
+    "title": "Share the ride,\nsave on every trip",
+    "subtitle": "We connect people going to the same place. No fees, no hassle.",
+    "features": {
+      "search": {
+        "title": "Find trips to your destination",
+        "body": "See who is already heading your way."
+      },
+      "publish": {
+        "title": "Publish your trip and save on gas",
+        "body": "Add passengers and split the costs."
+      },
+      "whatsapp": {
+        "title": "Coordinate on WhatsApp",
+        "body": "Payment and meeting point are arranged directly with the driver."
+      }
+    },
+    "cta": "Get started",
+    "note": "You don't need an account to browse trips"
+  }
+}
