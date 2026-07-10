@@ -1,4 +1,4 @@
-# Carpooling
+# Movilis
 
 npm workspaces monorepo.
 
@@ -36,5 +36,5 @@ npm run db:migrate
 Add a dependency to a specific workspace:
 
 ```bash
-npm install <pkg> --workspace @carpooling/mobile
+npm install <pkg> --workspace @movilis/mobile
 ```

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "carpooling",
-    "slug": "carpooling",
+    "name": "movilis",
+    "slug": "movilis",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "carpooling",
+    "scheme": "movilis",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
