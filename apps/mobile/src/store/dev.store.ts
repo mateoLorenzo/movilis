@@ -12,9 +12,9 @@ interface DevMocksState {
 }
 
 export const useDevMocksStore = create<DevMocksState>((set) => ({
-  hasNextTrip: true,
-  favoritesVariant: "many",
-  tripsVariant: "many",
+  hasNextTrip: false,
+  favoritesVariant: "empty",
+  tripsVariant: "empty",
   setHasNextTrip: (hasNextTrip) => set({ hasNextTrip }),
   setFavoritesVariant: (favoritesVariant) => set({ favoritesVariant }),
   setTripsVariant: (tripsVariant) => set({ tripsVariant }),
