@@ -111,7 +111,17 @@
   },
   "profile": {
     "title": "Profile",
-    "comingSoon": "Soon you'll be able to view and edit your profile."
+    "ratingSummary": "{{rating}} · {{count}} trips",
+    "myTrips": "My trips",
+    "completed": "Completed",
+    "published": "Published",
+    "rolePassenger": "Passenger",
+    "roleDriver": "Driver",
+    "favorites": "Favorite destinations",
+    "rateApp": "Rate the app",
+    "logout": "Log out",
+    "deleteAccount": "Delete my account",
+    "version": "Version {{version}}"
   },
   "searchDestination": {
     "popular": "Popular destinations",
