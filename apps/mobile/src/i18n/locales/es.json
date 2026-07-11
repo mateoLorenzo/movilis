@@ -61,6 +61,25 @@
     "alertBody": "Podemos enviarte una notificación apenas alguien publique un viaje a {{destination}}.",
     "alertCta": "Avisame cuando haya viajes"
   },
+  "tripDetail": {
+    "share": "Compartir",
+    "travelWith": "Viajás con {{name}}",
+    "verified": "Conductor verificado por la comunidad",
+    "rating": "Calificación",
+    "tripsDone": "Viajes realizados",
+    "seatsFree": "Asientos libres",
+    "seatsOf": "{{available}} de {{total}}",
+    "route": "Recorrido",
+    "origin": "Origen",
+    "destination": "Destino",
+    "pointNote": "El punto de salida exacto se coordina con el conductor",
+    "dateTime": "Fecha y hora",
+    "seatsAvailable": "Asientos disponibles",
+    "pricePerSeat": "Precio por asiento",
+    "notes": "Notas del conductor",
+    "disclaimer": "Coordinás el pago y el punto de encuentro directamente con el conductor.",
+    "reserve": "Reservar"
+  },
   "tabs": {
     "search": "Buscar",
     "publish": "Publicar",

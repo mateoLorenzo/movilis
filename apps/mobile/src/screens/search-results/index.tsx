@@ -50,7 +50,7 @@ const FilterChip = ({ icon: Icon, label }: FilterChipProps) => (
 
 const SearchResults = () => {
   const { t } = useTranslation();
-  const { back } = useRouter();
+  const { back, push } = useRouter();
   const origin = useSearchStore((state) => state.origin);
   const destination = useSearchStore((state) => state.destination);
   const resultsVariant = useDevMocksStore((state) => state.resultsVariant);
@@ -135,7 +135,14 @@ const SearchResults = () => {
           <FlashList
             data={results}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <TripRow trip={item} />}
+            renderItem={({ item }) => (
+              <TripRow
+                trip={item}
+                onPress={() =>
+                  push({ pathname: "/trip/[id]", params: { id: item.id } })
+                }
+              />
+            )}
             ItemSeparatorComponent={() => <View style={styles.rowDivider} />}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}

@@ -22,4 +22,7 @@ export const colors = {
     warning: "#F59E0B",
     error: "#EF4444",
   },
+  brand: {
+    whatsapp: "#25D366",
+  },
 } as const;

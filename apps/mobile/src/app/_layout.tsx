@@ -14,6 +14,7 @@ const RootLayout = () => {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="search-destination" />
         <Stack.Screen name="search-results" />
+        <Stack.Screen name="trip/[id]" />
       </Stack>
     </GestureHandlerRootView>
   );

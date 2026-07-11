@@ -61,6 +61,25 @@
     "alertBody": "We can send you a notification as soon as someone publishes a trip to {{destination}}.",
     "alertCta": "Notify me when there are trips"
   },
+  "tripDetail": {
+    "share": "Share",
+    "travelWith": "You're riding with {{name}}",
+    "verified": "Driver verified by the community",
+    "rating": "Rating",
+    "tripsDone": "Trips completed",
+    "seatsFree": "Seats available",
+    "seatsOf": "{{available}} of {{total}}",
+    "route": "Route",
+    "origin": "Origin",
+    "destination": "Destination",
+    "pointNote": "The exact departure point is arranged with the driver",
+    "dateTime": "Date and time",
+    "seatsAvailable": "Available seats",
+    "pricePerSeat": "Price per seat",
+    "notes": "Driver notes",
+    "disclaimer": "You arrange payment and the meeting point directly with the driver.",
+    "reserve": "Book"
+  },
   "tabs": {
     "search": "Search",
     "publish": "Publish",

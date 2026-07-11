@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import ArrowRightIcon from "@/assets/svg/arrow-right.svg";
 import NavigationIcon from "@/assets/svg/navigation.svg";
@@ -11,14 +11,15 @@ import { fonts } from "@/theme/fonts";
 
 interface TripRowProps {
   trip: TripListing;
+  onPress?: () => void;
 }
 
-const TripRow = ({ trip }: TripRowProps) => {
+const TripRow = ({ trip, onPress }: TripRowProps) => {
   const { t } = useTranslation();
 
   const isLastSeat = trip.seatsAvailable === 1;
 
-  return (
+  const content = (
     <View style={styles.row}>
       <InitialsAvatar initials={trip.driverInitials} size={48} fontSize={15} />
       <View style={styles.mid}>
@@ -65,6 +66,21 @@ const TripRow = ({ trip }: TripRowProps) => {
         <Text style={styles.perSeat}>{t("trip.perSeat")}</Text>
       </View>
     </View>
+  );
+
+  if (!onPress) {
+    return content;
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${trip.from} → ${trip.to}, ${trip.price}`}
+    >
+      {content}
+    </TouchableOpacity>
   );
 };
 
