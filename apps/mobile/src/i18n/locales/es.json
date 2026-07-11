@@ -86,8 +86,28 @@
     "profile": "Perfil"
   },
   "publish": {
-    "title": "Publicar",
-    "comingSoon": "Muy pronto vas a poder publicar tu viaje y sumar pasajeros."
+    "title": "Publicar viaje",
+    "routeTitle": "¿De dónde a dónde?",
+    "origin": "Origen",
+    "originPlaceholder": "¿De dónde salís?",
+    "destination": "Destino",
+    "destinationPlaceholder": "¿A dónde vas?",
+    "whenTitle": "¿Cuándo salís?",
+    "date": "Fecha",
+    "time": "Hora",
+    "seatsPriceTitle": "Asientos y precio",
+    "seats": "Asientos",
+    "decreaseSeats": "Quitar un asiento",
+    "increaseSeats": "Agregar un asiento",
+    "pricePerSeat": "Precio por asiento",
+    "priceHint": "Sugerido para esta ruta: {{min}} a {{max}}",
+    "notesTitle": "Notas",
+    "optional": "(opcional)",
+    "notesPlaceholder": "Ej: equipaje chico, no fumar, mascotas…",
+    "contactHint": "Los interesados te escriben a",
+    "edit": "Editar",
+    "cta": "Publicar viaje",
+    "micro": "Te avisamos con una notificación cuando alguien quiera sumarse."
   },
   "profile": {
     "title": "Perfil",

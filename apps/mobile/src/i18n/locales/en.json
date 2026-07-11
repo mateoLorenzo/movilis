@@ -86,8 +86,28 @@
     "profile": "Profile"
   },
   "publish": {
-    "title": "Publish",
-    "comingSoon": "Soon you'll be able to publish your trip and add passengers."
+    "title": "Publish trip",
+    "routeTitle": "From where to where?",
+    "origin": "Origin",
+    "originPlaceholder": "Where do you leave from?",
+    "destination": "Destination",
+    "destinationPlaceholder": "Where are you going?",
+    "whenTitle": "When do you leave?",
+    "date": "Date",
+    "time": "Time",
+    "seatsPriceTitle": "Seats and price",
+    "seats": "Seats",
+    "decreaseSeats": "Remove one seat",
+    "increaseSeats": "Add one seat",
+    "pricePerSeat": "Price per seat",
+    "priceHint": "Suggested for this route: {{min}} to {{max}}",
+    "notesTitle": "Notes",
+    "optional": "(optional)",
+    "notesPlaceholder": "E.g.: small luggage, no smoking, pets…",
+    "contactHint": "Interested riders will text you at",
+    "edit": "Edit",
+    "cta": "Publish trip",
+    "micro": "We'll notify you when someone wants to join."
   },
   "profile": {
     "title": "Profile",
