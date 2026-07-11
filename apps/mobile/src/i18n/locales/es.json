@@ -56,7 +56,10 @@
     "filters": "Filtros",
     "upToKm": "Hasta {{km}} km",
     "count_one": "{{count}} viaje encontrado",
-    "count_other": "{{count}} viajes encontrados"
+    "count_other": "{{count}} viajes encontrados",
+    "alertTitle": "Sin viajes por ahora",
+    "alertBody": "Podemos enviarte una notificación apenas alguien publique un viaje a {{destination}}.",
+    "alertCta": "Avisame cuando haya viajes"
   },
   "tabs": {
     "search": "Buscar",

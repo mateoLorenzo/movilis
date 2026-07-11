@@ -1,5 +1,7 @@
+import type { FC } from "react";
 import type { GestureResponderEvent } from "react-native";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import type { SvgProps } from "react-native-svg";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import { colors } from "@/theme/colors";
@@ -9,6 +11,7 @@ interface ButtonProps {
   label: string;
   onPress?: (event: GestureResponderEvent) => void;
   disabled?: boolean;
+  icon?: FC<SvgProps>;
 }
 
 const GradientFill = () => (
@@ -23,7 +26,7 @@ const GradientFill = () => (
   </Svg>
 );
 
-const Button = ({ label, onPress, disabled }: ButtonProps) => {
+const Button = ({ label, onPress, disabled, icon: Icon }: ButtonProps) => {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -35,6 +38,7 @@ const Button = ({ label, onPress, disabled }: ButtonProps) => {
     >
       <View style={[styles.container, disabled && styles.disabled]}>
         <GradientFill />
+        {Icon && <Icon width={17} height={17} color={colors.accent.onAccent} />}
         <Text style={styles.label}>{label}</Text>
       </View>
     </TouchableOpacity>
@@ -45,6 +49,8 @@ const styles = StyleSheet.create({
   container: {
     height: 54,
     borderRadius: 999,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",

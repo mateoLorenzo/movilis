@@ -56,7 +56,10 @@
     "filters": "Filters",
     "upToKm": "Up to {{km}} km",
     "count_one": "{{count}} trip found",
-    "count_other": "{{count}} trips found"
+    "count_other": "{{count}} trips found",
+    "alertTitle": "No trips available",
+    "alertBody": "We can send you a notification as soon as someone publishes a trip to {{destination}}.",
+    "alertCta": "Notify me when there are trips"
   },
   "tabs": {
     "search": "Search",

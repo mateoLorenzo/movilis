@@ -25,6 +25,12 @@ const TRIPS_OPTIONS: { label: string; value: DevListVariant }[] = [
   { label: "Many trips", value: "many" },
 ];
 
+const RESULTS_OPTIONS: { label: string; value: DevListVariant }[] = [
+  { label: "Empty", value: "empty" },
+  { label: "One result", value: "one" },
+  { label: "Many results", value: "many" },
+];
+
 interface DevMenuProps {
   bottomOffset?: number;
 }
@@ -81,6 +87,10 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
   );
   const tripsVariant = useDevMocksStore((state) => state.tripsVariant);
   const setTripsVariant = useDevMocksStore((state) => state.setTripsVariant);
+  const resultsVariant = useDevMocksStore((state) => state.resultsVariant);
+  const setResultsVariant = useDevMocksStore(
+    (state) => state.setResultsVariant,
+  );
 
   if (!__DEV__) {
     return null;
@@ -120,6 +130,13 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
           options={TRIPS_OPTIONS}
           selected={tripsVariant}
           onSelect={setTripsVariant}
+        />
+
+        <ChipSection
+          label="Search results"
+          options={RESULTS_OPTIONS}
+          selected={resultsVariant}
+          onSelect={setResultsVariant}
         />
       </BottomSheetModal>
     </>
