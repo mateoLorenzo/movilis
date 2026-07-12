@@ -82,6 +82,8 @@
   },
   "review": {
     "title": "¿Cómo fue tu viaje?",
+    "titleDriver": "¿Cómo fue el viaje?",
+    "submitAll": "Enviar calificaciones",
     "yourDriver": "Tu conductor",
     "rateStar_one": "Calificar con {{count}} estrella",
     "rateStar_other": "Calificar con {{count}} estrellas",

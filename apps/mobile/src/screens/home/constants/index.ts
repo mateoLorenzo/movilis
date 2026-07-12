@@ -24,6 +24,16 @@ export const mockReviewTrip = {
   driverInitials: "JP",
 } as const;
 
+export const mockDriverReview = {
+  from: "Colegiales",
+  to: "Capital Federal",
+  dateLabel: "Sáb 20 jun",
+  passengers: [
+    { id: "passenger-1", name: "Sofía García", initials: "SG", rating: 5 },
+    { id: "passenger-2", name: "Diego López", initials: "DL", rating: 3 },
+  ],
+} as const;
+
 export const mockFavoriteDestinations = [
   "Mar del Plata",
   "Córdoba",

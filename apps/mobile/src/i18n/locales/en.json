@@ -82,6 +82,8 @@
   },
   "review": {
     "title": "How was your trip?",
+    "titleDriver": "How was the trip?",
+    "submitAll": "Send ratings",
     "yourDriver": "Your driver",
     "rateStar_one": "Rate {{count}} star",
     "rateStar_other": "Rate {{count}} stars",

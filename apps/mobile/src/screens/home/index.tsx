@@ -21,6 +21,7 @@ import { Button } from "@/components/Button";
 import { DevMenu } from "@/components/DevMenu";
 import { InitialsAvatar } from "@/components/InitialsAvatar";
 import { NextTripCard } from "@/screens/home/components/NextTripCard";
+import { ReviewPassengersSheet } from "@/screens/home/components/ReviewPassengersSheet";
 import { ReviewTripSheet } from "@/screens/home/components/ReviewTripSheet";
 import { TripRow } from "@/components/TripRow";
 import {
@@ -94,6 +95,10 @@ const Home = () => {
   );
   const setShowPassengerReview = useDevMocksStore(
     (state) => state.setShowPassengerReview,
+  );
+  const showDriverReview = useDevMocksStore((state) => state.showDriverReview);
+  const setShowDriverReview = useDevMocksStore(
+    (state) => state.setShowDriverReview,
   );
 
   const favoriteDestinations =
@@ -240,6 +245,10 @@ const Home = () => {
       <ReviewTripSheet
         visible={showPassengerReview}
         onDismiss={() => setShowPassengerReview(false)}
+      />
+      <ReviewPassengersSheet
+        visible={showDriverReview}
+        onDismiss={() => setShowDriverReview(false)}
       />
       <DevMenu />
     </SafeAreaView>

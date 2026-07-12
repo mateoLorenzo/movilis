@@ -102,9 +102,22 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
   const setShowPassengerReview = useDevMocksStore(
     (state) => state.setShowPassengerReview,
   );
+  const showDriverReview = useDevMocksStore(
+    (state) => state.showDriverReview,
+  );
+  const setShowDriverReview = useDevMocksStore(
+    (state) => state.setShowDriverReview,
+  );
 
   const handleReviewSelect = (show: boolean) => {
     setShowPassengerReview(show);
+    if (show) {
+      setVisible(false);
+    }
+  };
+
+  const handleDriverReviewSelect = (show: boolean) => {
+    setShowDriverReview(show);
     if (show) {
       setVisible(false);
     }
@@ -162,6 +175,13 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
           options={REVIEW_OPTIONS}
           selected={showPassengerReview}
           onSelect={handleReviewSelect}
+        />
+
+        <ChipSection
+          label="Driver review sheet"
+          options={REVIEW_OPTIONS}
+          selected={showDriverReview}
+          onSelect={handleDriverReviewSelect}
         />
       </BottomSheetModal>
     </>
