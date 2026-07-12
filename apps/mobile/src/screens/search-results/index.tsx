@@ -172,7 +172,7 @@ const SearchResults = () => {
           </View>
         </View>
       )}
-      <DevMenu />
+      <DevMenu sections={["results"]} />
     </SafeAreaView>
   );
 };

@@ -267,7 +267,7 @@ const TripDetail = () => {
           </View>
         </TouchableOpacity>
       </View>
-      <DevMenu />
+      <DevMenu sections={["tripView"]} />
     </SafeAreaView>
   );
 };

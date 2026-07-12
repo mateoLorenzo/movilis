@@ -41,8 +41,28 @@ const TRIP_VIEW_OPTIONS: { label: string; value: boolean }[] = [
   { label: "Driver", value: true },
 ];
 
+type DevMenuSection =
+  | "nextTrip"
+  | "favorites"
+  | "trips"
+  | "results"
+  | "passengerReview"
+  | "driverReview"
+  | "tripView";
+
+const ALL_SECTIONS: DevMenuSection[] = [
+  "nextTrip",
+  "favorites",
+  "trips",
+  "results",
+  "passengerReview",
+  "driverReview",
+  "tripView",
+];
+
 interface DevMenuProps {
   bottomOffset?: number;
+  sections?: DevMenuSection[];
 }
 
 interface ChipSectionProps<Value> {
@@ -85,7 +105,7 @@ const ChipSection = <Value extends string | boolean>({
   </View>
 );
 
-const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
+const DevMenu = ({ bottomOffset = 16, sections = ALL_SECTIONS }: DevMenuProps) => {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
 
@@ -151,54 +171,68 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
       <BottomSheetModal visible={visible} onDismiss={() => setVisible(false)}>
         <Text style={styles.title}>Dev tools</Text>
 
-        <ChipSection
-          label="Next trip section"
-          options={NEXT_TRIP_OPTIONS}
-          selected={hasNextTrip}
-          onSelect={setHasNextTrip}
-        />
+        {sections.includes("nextTrip") && (
+          <ChipSection
+            label="Next trip section"
+            options={NEXT_TRIP_OPTIONS}
+            selected={hasNextTrip}
+            onSelect={setHasNextTrip}
+          />
+        )}
 
-        <ChipSection
-          label="Favorite destinations"
-          options={FAVORITES_OPTIONS}
-          selected={favoritesVariant}
-          onSelect={setFavoritesVariant}
-        />
+        {sections.includes("favorites") && (
+          <ChipSection
+            label="Favorite destinations"
+            options={FAVORITES_OPTIONS}
+            selected={favoritesVariant}
+            onSelect={setFavoritesVariant}
+          />
+        )}
 
-        <ChipSection
-          label="Trips to destinations"
-          options={TRIPS_OPTIONS}
-          selected={tripsVariant}
-          onSelect={setTripsVariant}
-        />
+        {sections.includes("trips") && (
+          <ChipSection
+            label="Trips to destinations"
+            options={TRIPS_OPTIONS}
+            selected={tripsVariant}
+            onSelect={setTripsVariant}
+          />
+        )}
 
-        <ChipSection
-          label="Search results"
-          options={RESULTS_OPTIONS}
-          selected={resultsVariant}
-          onSelect={setResultsVariant}
-        />
+        {sections.includes("results") && (
+          <ChipSection
+            label="Search results"
+            options={RESULTS_OPTIONS}
+            selected={resultsVariant}
+            onSelect={setResultsVariant}
+          />
+        )}
 
-        <ChipSection
-          label="Passenger review sheet"
-          options={REVIEW_OPTIONS}
-          selected={showPassengerReview}
-          onSelect={handleReviewSelect}
-        />
+        {sections.includes("passengerReview") && (
+          <ChipSection
+            label="Passenger review sheet"
+            options={REVIEW_OPTIONS}
+            selected={showPassengerReview}
+            onSelect={handleReviewSelect}
+          />
+        )}
 
-        <ChipSection
-          label="Driver review sheet"
-          options={REVIEW_OPTIONS}
-          selected={showDriverReview}
-          onSelect={handleDriverReviewSelect}
-        />
+        {sections.includes("driverReview") && (
+          <ChipSection
+            label="Driver review sheet"
+            options={REVIEW_OPTIONS}
+            selected={showDriverReview}
+            onSelect={handleDriverReviewSelect}
+          />
+        )}
 
-        <ChipSection
-          label="Trip detail view"
-          options={TRIP_VIEW_OPTIONS}
-          selected={driverTripView}
-          onSelect={setDriverTripView}
-        />
+        {sections.includes("tripView") && (
+          <ChipSection
+            label="Trip detail view"
+            options={TRIP_VIEW_OPTIONS}
+            selected={driverTripView}
+            onSelect={setDriverTripView}
+          />
+        )}
       </BottomSheetModal>
     </>
   );

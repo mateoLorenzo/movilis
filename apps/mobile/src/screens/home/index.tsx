@@ -250,7 +250,15 @@ const Home = () => {
         visible={showDriverReview}
         onDismiss={() => setShowDriverReview(false)}
       />
-      <DevMenu />
+      <DevMenu
+        sections={[
+          "nextTrip",
+          "favorites",
+          "trips",
+          "passengerReview",
+          "driverReview",
+        ]}
+      />
     </SafeAreaView>
   );
 };

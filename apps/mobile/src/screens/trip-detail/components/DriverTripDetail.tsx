@@ -203,7 +203,7 @@ const DriverTripDetail = () => {
           </View>
         </TouchableOpacity>
       </ScrollView>
-      <DevMenu />
+      <DevMenu sections={["tripView"]} />
     </SafeAreaView>
   );
 };
