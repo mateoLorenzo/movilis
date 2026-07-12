@@ -21,6 +21,7 @@ import { Button } from "@/components/Button";
 import { DevMenu } from "@/components/DevMenu";
 import { InitialsAvatar } from "@/components/InitialsAvatar";
 import { NextTripCard } from "@/screens/home/components/NextTripCard";
+import { ReviewTripSheet } from "@/screens/home/components/ReviewTripSheet";
 import { TripRow } from "@/components/TripRow";
 import {
   mockFavoriteDestinations,
@@ -88,6 +89,12 @@ const Home = () => {
   const hasNextTrip = useDevMocksStore((state) => state.hasNextTrip);
   const favoritesVariant = useDevMocksStore((state) => state.favoritesVariant);
   const tripsVariant = useDevMocksStore((state) => state.tripsVariant);
+  const showPassengerReview = useDevMocksStore(
+    (state) => state.showPassengerReview,
+  );
+  const setShowPassengerReview = useDevMocksStore(
+    (state) => state.setShowPassengerReview,
+  );
 
   const favoriteDestinations =
     favoritesVariant === "empty"
@@ -230,7 +237,11 @@ const Home = () => {
           )}
         </View>
       </ScrollView>
-      <DevMenu bottomOffset={76} />
+      <ReviewTripSheet
+        visible={showPassengerReview}
+        onDismiss={() => setShowPassengerReview(false)}
+      />
+      <DevMenu />
     </SafeAreaView>
   );
 };

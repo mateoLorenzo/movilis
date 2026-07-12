@@ -31,6 +31,11 @@ const RESULTS_OPTIONS: { label: string; value: DevListVariant }[] = [
   { label: "Many results", value: "many" },
 ];
 
+const REVIEW_OPTIONS: { label: string; value: boolean }[] = [
+  { label: "Hidden", value: false },
+  { label: "Visible", value: true },
+];
+
 interface DevMenuProps {
   bottomOffset?: number;
 }
@@ -91,6 +96,19 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
   const setResultsVariant = useDevMocksStore(
     (state) => state.setResultsVariant,
   );
+  const showPassengerReview = useDevMocksStore(
+    (state) => state.showPassengerReview,
+  );
+  const setShowPassengerReview = useDevMocksStore(
+    (state) => state.setShowPassengerReview,
+  );
+
+  const handleReviewSelect = (show: boolean) => {
+    setShowPassengerReview(show);
+    if (show) {
+      setVisible(false);
+    }
+  };
 
   if (!__DEV__) {
     return null;
@@ -137,6 +155,13 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
           options={RESULTS_OPTIONS}
           selected={resultsVariant}
           onSelect={setResultsVariant}
+        />
+
+        <ChipSection
+          label="Passenger review sheet"
+          options={REVIEW_OPTIONS}
+          selected={showPassengerReview}
+          onSelect={handleReviewSelect}
         />
       </BottomSheetModal>
     </>

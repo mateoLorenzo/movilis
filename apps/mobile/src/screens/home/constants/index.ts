@@ -16,6 +16,14 @@ export const mockNextTrip: NextTrip = {
   rating: "4.8",
 };
 
+export const mockReviewTrip = {
+  from: "Colegiales",
+  to: "Mar del Plata",
+  dateLabel: "Sáb 14 jun",
+  driverName: "Juan Pereyra",
+  driverInitials: "JP",
+} as const;
+
 export const mockFavoriteDestinations = [
   "Mar del Plata",
   "Córdoba",

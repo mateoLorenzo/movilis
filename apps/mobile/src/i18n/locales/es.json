@@ -80,6 +80,15 @@
     "disclaimer": "Coordinás el pago y el punto de encuentro directamente con el conductor.",
     "reserve": "Reservar"
   },
+  "review": {
+    "title": "¿Cómo fue tu viaje?",
+    "yourDriver": "Tu conductor",
+    "rateStar_one": "Calificar con {{count}} estrella",
+    "rateStar_other": "Calificar con {{count}} estrellas",
+    "commentPlaceholder": "Contanos cómo fue (opcional)",
+    "submit": "Enviar calificación",
+    "notNow": "Ahora no"
+  },
   "tabs": {
     "search": "Buscar",
     "publish": "Publicar",

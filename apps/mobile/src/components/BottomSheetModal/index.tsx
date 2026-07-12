@@ -2,7 +2,13 @@
 import type { ReactNode, Ref } from "react";
 import { useEffect, useImperativeHandle } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   Gesture,
   GestureDetector,
@@ -34,6 +40,7 @@ interface BottomSheetModalProps {
   visible: boolean;
   onDismiss: () => void;
   children: ReactNode;
+  anchored?: boolean;
   ref?: Ref<BottomSheetModalRef>;
 }
 
@@ -41,6 +48,7 @@ export const BottomSheetModal = ({
   visible,
   onDismiss,
   children,
+  anchored = false,
   ref,
 }: BottomSheetModalProps) => {
   const { t } = useTranslation();
@@ -121,17 +129,24 @@ export const BottomSheetModal = ({
           />
         </Animated.View>
 
-        <GestureDetector gesture={panGesture}>
-          <Animated.View
-            style={[
-              styles.card,
-              { marginBottom: insets.bottom + 4 },
-              cardStyle,
-            ]}
-          >
-            {children}
-          </Animated.View>
-        </GestureDetector>
+        <KeyboardAvoidingView
+          behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
+        >
+          <GestureDetector gesture={panGesture}>
+            <Animated.View
+              style={[
+                styles.card,
+                anchored
+                  ? [styles.cardAnchored, { paddingBottom: insets.bottom + 16 }]
+                  : styles.cardFloating,
+                cardStyle,
+              ]}
+            >
+              {anchored && <View style={styles.handle} />}
+              {children}
+            </Animated.View>
+          </GestureDetector>
+        </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -151,19 +166,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.overlay,
   },
   card: {
-    marginHorizontal: 12,
     backgroundColor: colors.neutral.background,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    borderRadius: 32,
-    paddingTop: 32,
-    paddingBottom: 40,
-    paddingHorizontal: 16,
-    gap: 24,
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 6,
+  },
+  cardFloating: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    borderRadius: 45,
+    paddingTop: 32,
+    paddingBottom: 40,
+    paddingHorizontal: 16,
+    gap: 24,
+  },
+  cardAnchored: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 10,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  handle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.neutral.border,
   },
 });

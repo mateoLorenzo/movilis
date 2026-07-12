@@ -80,6 +80,15 @@
     "disclaimer": "You arrange payment and the meeting point directly with the driver.",
     "reserve": "Book"
   },
+  "review": {
+    "title": "How was your trip?",
+    "yourDriver": "Your driver",
+    "rateStar_one": "Rate {{count}} star",
+    "rateStar_other": "Rate {{count}} stars",
+    "commentPlaceholder": "Tell us how it went (optional)",
+    "submit": "Send rating",
+    "notNow": "Not now"
+  },
   "tabs": {
     "search": "Search",
     "publish": "Publish",
