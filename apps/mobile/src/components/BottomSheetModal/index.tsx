@@ -2,18 +2,13 @@
 import type { ReactNode, Ref } from "react";
 import { useEffect, useImperativeHandle } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  KeyboardAvoidingView,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Keyboard, Modal, StyleSheet, TouchableOpacity, View } from "react-native";
 import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, {
   interpolate,
   runOnJS,
@@ -31,6 +26,7 @@ const CLOSE_DURATION = 220;
 const SLIDE_DISTANCE = 600;
 const DRAG_CLOSE_THRESHOLD = 120;
 const DRAG_CLOSE_VELOCITY = 800;
+const KEYBOARD_GAP = 20;
 
 export interface BottomSheetModalRef {
   close: (onClosed: () => void) => void;
@@ -53,6 +49,7 @@ export const BottomSheetModal = ({
 }: BottomSheetModalProps) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   const progress = useSharedValue(0);
   const dragY = useSharedValue(0);
 
@@ -64,6 +61,7 @@ export const BottomSheetModal = ({
   }, [visible, progress, dragY]);
 
   const close = (onClosed: () => void) => {
+    Keyboard.dismiss();
     progress.value = withTiming(0, { duration: CLOSE_DURATION }, (finished) => {
       if (finished) {
         runOnJS(onClosed)();
@@ -111,6 +109,14 @@ export const BottomSheetModal = ({
     ],
   }));
 
+  // The sheet grows behind the keyboard instead of lifting off the bottom edge
+  const anchoredPaddingStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(
+      insets.bottom + 16,
+      -keyboardHeight.value + KEYBOARD_GAP,
+    ),
+  }));
+
   return (
     <Modal
       visible={visible}
@@ -129,24 +135,20 @@ export const BottomSheetModal = ({
           />
         </Animated.View>
 
-        <KeyboardAvoidingView
-          behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
-        >
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              style={[
-                styles.card,
-                anchored
-                  ? [styles.cardAnchored, { paddingBottom: insets.bottom + 16 }]
-                  : styles.cardFloating,
-                cardStyle,
-              ]}
-            >
-              {anchored && <View style={styles.handle} />}
-              {children}
-            </Animated.View>
-          </GestureDetector>
-        </KeyboardAvoidingView>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              styles.card,
+              anchored
+                ? [styles.cardAnchored, anchoredPaddingStyle]
+                : styles.cardFloating,
+              cardStyle,
+            ]}
+          >
+            {anchored && <View style={styles.handle} />}
+            {children}
+          </Animated.View>
+        </GestureDetector>
       </GestureHandlerRootView>
     </Modal>
   );
