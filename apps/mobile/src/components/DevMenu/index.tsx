@@ -36,6 +36,11 @@ const REVIEW_OPTIONS: { label: string; value: boolean }[] = [
   { label: "Visible", value: true },
 ];
 
+const TRIP_VIEW_OPTIONS: { label: string; value: boolean }[] = [
+  { label: "Passenger", value: false },
+  { label: "Driver", value: true },
+];
+
 interface DevMenuProps {
   bottomOffset?: number;
 }
@@ -107,6 +112,10 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
   );
   const setShowDriverReview = useDevMocksStore(
     (state) => state.setShowDriverReview,
+  );
+  const driverTripView = useDevMocksStore((state) => state.driverTripView);
+  const setDriverTripView = useDevMocksStore(
+    (state) => state.setDriverTripView,
   );
 
   const handleReviewSelect = (show: boolean) => {
@@ -182,6 +191,13 @@ const DevMenu = ({ bottomOffset = 16 }: DevMenuProps) => {
           options={REVIEW_OPTIONS}
           selected={showDriverReview}
           onSelect={handleDriverReviewSelect}
+        />
+
+        <ChipSection
+          label="Trip detail view"
+          options={TRIP_VIEW_OPTIONS}
+          selected={driverTripView}
+          onSelect={setDriverTripView}
         />
       </BottomSheetModal>
     </>

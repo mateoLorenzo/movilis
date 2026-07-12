@@ -24,8 +24,11 @@ import StarIcon from "@/assets/svg/star.svg";
 import TicketIcon from "@/assets/svg/ticket.svg";
 import UsersIcon from "@/assets/svg/users.svg";
 import WhatsAppIcon from "@/assets/svg/whatsapp.svg";
+import { DevMenu } from "@/components/DevMenu";
 import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { DriverTripDetail } from "@/screens/trip-detail/components/DriverTripDetail";
 import { findMockTrip, mockTripExtras } from "@/screens/trip-detail/constants";
+import { useDevMocksStore } from "@/store/dev.store";
 import { useSearchStore } from "@/store/search.store";
 import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
@@ -70,11 +73,16 @@ const TripDetail = () => {
   const { bottom } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const destination = useSearchStore((state) => state.destination);
+  const driverTripView = useDevMocksStore((state) => state.driverTripView);
 
   const trip = useMemo(
     () => findMockTrip(id, destination ?? ""),
     [id, destination],
   );
+
+  if (driverTripView) {
+    return <DriverTripDetail />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -259,6 +267,7 @@ const TripDetail = () => {
           </View>
         </TouchableOpacity>
       </View>
+      <DevMenu />
     </SafeAreaView>
   );
 };

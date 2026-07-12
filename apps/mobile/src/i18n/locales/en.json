@@ -78,7 +78,19 @@
     "pricePerSeat": "Price per seat",
     "notes": "Driver notes",
     "disclaimer": "You arrange payment and the meeting point directly with the driver.",
-    "reserve": "Book"
+    "reserve": "Book",
+    "moreOptions": "More options",
+    "status": "Status",
+    "active": "Active",
+    "seatsAssigned": "Seats assigned",
+    "perSeat": "Per seat",
+    "interested": "Interested ({{count}})",
+    "interestedSub": "Sorted by arrival order",
+    "assigned": "Assigned",
+    "accept": "Accept",
+    "newUser": "New to the app",
+    "ratingTrips": "{{rating}} · {{count}} trips",
+    "shareTrip": "Share trip"
   },
   "review": {
     "title": "How was your trip?",

@@ -78,7 +78,19 @@
     "pricePerSeat": "Precio por asiento",
     "notes": "Notas del conductor",
     "disclaimer": "Coordinás el pago y el punto de encuentro directamente con el conductor.",
-    "reserve": "Reservar"
+    "reserve": "Reservar",
+    "moreOptions": "Más opciones",
+    "status": "Estado",
+    "active": "Activo",
+    "seatsAssigned": "Asientos asignados",
+    "perSeat": "Por asiento",
+    "interested": "Interesados ({{count}})",
+    "interestedSub": "Ordenados por orden de llegada",
+    "assigned": "Asignado",
+    "accept": "Aceptar",
+    "newUser": "Nuevo en la app",
+    "ratingTrips": "{{rating}} · {{count}} viajes",
+    "shareTrip": "Compartir viaje"
   },
   "review": {
     "title": "¿Cómo fue tu viaje?",
