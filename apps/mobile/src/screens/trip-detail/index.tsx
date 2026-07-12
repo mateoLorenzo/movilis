@@ -18,7 +18,6 @@ import type { SvgProps } from "react-native-svg";
 import CalendarIcon from "@/assets/svg/calendar.svg";
 import ChevronLeftIcon from "@/assets/svg/chevron-left.svg";
 import InfoIcon from "@/assets/svg/info.svg";
-import MapPinIcon from "@/assets/svg/map-pin.svg";
 import ShareIcon from "@/assets/svg/share.svg";
 import StarIcon from "@/assets/svg/star.svg";
 import TicketIcon from "@/assets/svg/ticket.svg";
@@ -165,47 +164,13 @@ const TripDetail = () => {
           />
         </View>
 
-        <View style={styles.hairline} />
-
-        <View style={styles.routeSection}>
-          <Text style={styles.sectionTitle}>{t("tripDetail.route")}</Text>
-          <View>
-            <View style={styles.routeRow}>
-              <View style={styles.routeMarker}>
-                <View style={styles.routeDot} />
-              </View>
-              <View style={styles.routeTextCol}>
-                <Text style={styles.routeName}>{trip.from}</Text>
-                <Text style={styles.routeLabel}>{t("tripDetail.origin")}</Text>
-              </View>
-            </View>
-            <View style={styles.routeConnector} />
-            <View style={styles.routeRow}>
-              <View style={styles.routeMarker}>
-                <MapPinIcon
-                  width={18}
-                  height={18}
-                  color={colors.accent.primary}
-                />
-              </View>
-              <View style={styles.routeTextCol}>
-                <Text style={styles.routeName}>{trip.to}</Text>
-                <Text style={styles.routeLabel}>
-                  {t("tripDetail.destination")}
-                </Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.pointNote}>
-            <InfoIcon
-              width={14}
-              height={14}
-              color={colors.neutral.textSecondary}
-            />
-            <Text style={styles.pointNoteText}>
-              {t("tripDetail.pointNote")}
-            </Text>
-          </View>
+        <View style={styles.pointNote}>
+          <InfoIcon
+            width={14}
+            height={14}
+            color={colors.neutral.textSecondary}
+          />
+          <Text style={styles.pointNoteText}>{t("tripDetail.pointNote")}</Text>
         </View>
 
         <View style={styles.hairline} />
@@ -239,8 +204,6 @@ const TripDetail = () => {
           <Text style={styles.sectionTitle}>{t("tripDetail.notes")}</Text>
           <Text style={styles.notesBody}>{mockTripExtras.notes}</Text>
         </View>
-
-        <Text style={styles.disclaimer}>{t("tripDetail.disclaimer")}</Text>
       </ScrollView>
 
       <View style={styles.bottomBarHairline} />
@@ -369,50 +332,10 @@ const styles = StyleSheet.create({
     height: 36,
     backgroundColor: colors.neutral.divider,
   },
-  routeSection: {
-    gap: 14,
-  },
   sectionTitle: {
     fontFamily: fonts.bold,
     fontSize: 18,
     color: colors.neutral.textPrimary,
-  },
-  routeRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  routeMarker: {
-    width: 20,
-    alignItems: "center",
-    paddingTop: 4,
-  },
-  routeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.accent.primary,
-  },
-  routeTextCol: {
-    flex: 1,
-    gap: 1,
-  },
-  routeName: {
-    fontFamily: fonts.semiBold,
-    fontSize: 16,
-    color: colors.neutral.textPrimary,
-  },
-  routeLabel: {
-    fontFamily: fonts.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-  routeConnector: {
-    width: 2,
-    height: 18,
-    marginLeft: 9,
-    marginVertical: 2,
-    backgroundColor: colors.neutral.divider,
   },
   pointNote: {
     flexDirection: "row",
@@ -458,13 +381,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: colors.neutral.textSecondary,
-  },
-  disclaimer: {
-    fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.neutral.textMuted,
-    textAlign: "center",
   },
   bottomBarHairline: {
     height: 1,
