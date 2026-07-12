@@ -219,7 +219,12 @@ const Home = () => {
               {trips.map((trip, index) => (
                 <View key={trip.id}>
                   {index > 0 && <View style={styles.rowDivider} />}
-                  <TripRow trip={trip} />
+                  <TripRow
+                    trip={trip}
+                    onPress={() =>
+                      push({ pathname: "/trip/[id]", params: { id: trip.id } })
+                    }
+                  />
                 </View>
               ))}
             </View>
