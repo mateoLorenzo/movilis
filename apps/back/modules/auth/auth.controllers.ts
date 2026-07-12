@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import { authConfig } from '../../auth.js'
+import { requireAccessUserId } from './auth.require.js'
 import { AuthError, authService } from './auth.service.js'
 
 type RequestOtpBody = { phoneNumber: string }
@@ -123,20 +124,13 @@ export async function logout(
 }
 
 export async function me(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    await request.jwtVerify()
-  } catch {
-    return reply.code(401).send({ message: 'Invalid access token' })
+  const userId = await requireAccessUserId(request, reply)
+
+  if (!userId) {
+    return
   }
 
-  if (request.user.tokenType !== 'access' || !request.user.sub) {
-    return reply.code(401).send({ message: 'Invalid access token' })
-  }
-
-  const user = await authService.getActiveUserById(
-    request.server.db,
-    request.user.sub,
-  )
+  const user = await authService.getActiveUserById(request.server.db, userId)
 
   if (!user) {
     return reply.code(401).send({ message: 'Invalid access token' })
