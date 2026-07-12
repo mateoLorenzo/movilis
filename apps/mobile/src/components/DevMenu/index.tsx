@@ -9,8 +9,8 @@ import { colors } from "@/theme/colors";
 import { fonts } from "@/theme/fonts";
 
 const NEXT_TRIP_OPTIONS: { label: string; value: boolean }[] = [
-  { label: "With next trip", value: true },
   { label: "Without next trip", value: false },
+  { label: "With next trip", value: true },
 ];
 
 const FAVORITES_OPTIONS: { label: string; value: DevListVariant }[] = [

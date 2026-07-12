@@ -21,7 +21,7 @@ export const useDevMocksStore = create<DevMocksState>((set) => ({
   hasNextTrip: false,
   favoritesVariant: "empty",
   tripsVariant: "empty",
-  resultsVariant: "many",
+  resultsVariant: "empty",
   showPassengerReview: false,
   showDriverReview: false,
   setHasNextTrip: (hasNextTrip) => set({ hasNextTrip }),
