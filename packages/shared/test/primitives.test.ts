@@ -29,6 +29,13 @@ describe('timestampSchema', () => {
     expect(v.parse(timestampSchema, value)).toBe(value)
   })
 
+  it.each(['0099-01-01T00:00:00Z', '0000-01-01T00:00:00Z'])(
+    'accepts an early four-digit ISO year: %s',
+    (value) => {
+      expect(v.parse(timestampSchema, value)).toBe(value)
+    },
+  )
+
   it.each([
     '2026-07-26T14:30:00',
     '2026-07-26',
