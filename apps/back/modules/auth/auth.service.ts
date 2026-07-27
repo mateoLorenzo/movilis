@@ -2,8 +2,6 @@ import { authSessions, otpChallenges, users, type Db } from '@movilis/db'
 import { and, count, eq, gte, isNull } from 'drizzle-orm'
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
-import { authConfig } from '../../auth.js'
-
 const maxOtpRequestsPerWindow = 3
 const otpRequestWindowMs = 15 * 60 * 1000
 const maxOtpAttempts = 3
@@ -21,7 +19,7 @@ export class AuthError extends Error {
 }
 
 export const authService = {
-  async requestOtp(db: Db, phoneNumber: string) {
+  async requestOtp(db: Db, phoneNumber: string, otpTtlSeconds: number) {
     const now = new Date()
     const requestWindowStart = new Date(now.getTime() - otpRequestWindowMs)
     const [{ requestCount }] = await db
@@ -39,7 +37,7 @@ export const authService = {
     }
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
-    const expiresAt = new Date(now.getTime() + authConfig.otpTtlSeconds * 1000)
+    const expiresAt = new Date(now.getTime() + otpTtlSeconds * 1000)
 
     await db.insert(otpChallenges).values({
       id: randomUUID(),
@@ -51,7 +49,12 @@ export const authService = {
     return { code, expiresAt }
   },
 
-  async verifyOtp(db: Db, phoneNumber: string, code: string) {
+  async verifyOtp(
+    db: Db,
+    phoneNumber: string,
+    code: string,
+    refreshTokenTtlSeconds: number,
+  ) {
     const now = new Date()
     const challenge = await db.query.otpChallenges.findFirst({
       where: (otpChallenges, { and, eq, gt, isNull }) =>
@@ -91,7 +94,11 @@ export const authService = {
       return { type: 'requiresSignup' as const, phoneNumber }
     }
 
-    const refreshToken = await createRefreshSession(db, user.id)
+    const refreshToken = await createRefreshSession(
+      db,
+      user.id,
+      refreshTokenTtlSeconds,
+    )
     return { type: 'authenticated' as const, user, refreshToken }
   },
 
@@ -103,6 +110,7 @@ export const authService = {
       cityId: string
       profilePhotoUrl?: string
     },
+    refreshTokenTtlSeconds: number,
   ) {
     const existingUser = await findActiveUserByPhoneNumber(
       db,
@@ -132,11 +140,19 @@ export const authService = {
       })
       .returning()
 
-    const refreshToken = await createRefreshSession(db, user.id)
+    const refreshToken = await createRefreshSession(
+      db,
+      user.id,
+      refreshTokenTtlSeconds,
+    )
     return { user, refreshToken }
   },
 
-  async refresh(db: Db, refreshToken: string) {
+  async refresh(
+    db: Db,
+    refreshToken: string,
+    refreshTokenTtlSeconds: number,
+  ) {
     const now = new Date()
     const tokenHash = hashToken(refreshToken)
 
@@ -167,7 +183,7 @@ export const authService = {
         throw new AuthError('Invalid refresh token', 401)
       }
 
-      const nextSession = createSessionValues(user.id)
+      const nextSession = createSessionValues(user.id, refreshTokenTtlSeconds)
       const [revokedSession] = await tx
         .update(authSessions)
         .set({ revokedAt: now, replacedBySessionId: nextSession.session.id })
@@ -202,13 +218,17 @@ export const authService = {
   },
 }
 
-async function createRefreshSession(db: Db, userId: string) {
-  const values = createSessionValues(userId)
+async function createRefreshSession(
+  db: Db,
+  userId: string,
+  refreshTokenTtlSeconds: number,
+) {
+  const values = createSessionValues(userId, refreshTokenTtlSeconds)
   await db.insert(authSessions).values(values.session)
   return values.refreshToken
 }
 
-function createSessionValues(userId: string) {
+function createSessionValues(userId: string, refreshTokenTtlSeconds: number) {
   const refreshToken = randomBytes(32).toString('base64url')
 
   return {
@@ -217,9 +237,7 @@ function createSessionValues(userId: string) {
       id: randomUUID(),
       userId,
       refreshTokenHash: hashToken(refreshToken),
-      expiresAt: new Date(
-        Date.now() + authConfig.refreshTokenTtlSeconds * 1000,
-      ),
+      expiresAt: new Date(Date.now() + refreshTokenTtlSeconds * 1000),
     },
   }
 }

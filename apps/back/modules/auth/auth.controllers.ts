@@ -1,6 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
-import { authConfig } from '../../auth.js'
 import { requireAccessUserId } from './auth.require.js'
 import { AuthError, authService } from './auth.service.js'
 
@@ -22,11 +21,14 @@ export async function requestOtp(
     const otp = await authService.requestOtp(
       request.server.db,
       request.body.phoneNumber,
+      request.server.authConfig.otpTtlSeconds,
     )
 
     return reply.send({
-      expiresInSeconds: authConfig.otpTtlSeconds,
-      ...(authConfig.exposeDevOtpCode ? { devCode: otp.code } : {}),
+      expiresInSeconds: request.server.authConfig.otpTtlSeconds,
+      ...(request.server.authConfig.exposeDevOtpCode
+        ? { devCode: otp.code }
+        : {}),
     })
   } catch (error) {
     return sendAuthError(reply, error)
@@ -42,6 +44,7 @@ export async function verifyOtp(
       request.server.db,
       request.body.phoneNumber,
       request.body.code,
+      request.server.authConfig.refreshTokenTtlSeconds,
     )
 
     if (result.type === 'requiresSignup') {
@@ -49,7 +52,7 @@ export async function verifyOtp(
         requiresSignup: true,
         onboardingToken: request.server.jwt.sign(
           { phoneNumber: result.phoneNumber, tokenType: 'onboarding' },
-          { expiresIn: authConfig.otpTtlSeconds },
+          { expiresIn: request.server.authConfig.otpTtlSeconds },
         ),
       })
     }
@@ -82,12 +85,16 @@ export async function completeSignup(
   }
 
   try {
-    const result = await authService.completeSignup(request.server.db, {
-      phoneNumber: payload.phoneNumber,
-      fullName: request.body.fullName,
-      cityId: request.body.cityId,
-      profilePhotoUrl: request.body.profilePhotoUrl,
-    })
+    const result = await authService.completeSignup(
+      request.server.db,
+      {
+        phoneNumber: payload.phoneNumber,
+        fullName: request.body.fullName,
+        cityId: request.body.cityId,
+        profilePhotoUrl: request.body.profilePhotoUrl,
+      },
+      request.server.authConfig.refreshTokenTtlSeconds,
+    )
 
     return reply.send(
       createTokenResponse(request, result.user, result.refreshToken),
@@ -105,6 +112,7 @@ export async function refresh(
     const result = await authService.refresh(
       request.server.db,
       request.body.refreshToken,
+      request.server.authConfig.refreshTokenTtlSeconds,
     )
 
     return reply.send(
@@ -147,7 +155,7 @@ function createTokenResponse(
   return {
     accessToken: request.server.jwt.sign(
       { sub: user.id, tokenType: 'access' },
-      { expiresIn: authConfig.accessTokenTtlSeconds },
+      { expiresIn: request.server.authConfig.accessTokenTtlSeconds },
     ),
     refreshToken,
     user,

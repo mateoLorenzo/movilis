@@ -30,4 +30,39 @@ describe('buildApp', () => {
     expect(listen).not.toHaveBeenCalled()
     expect(app.server.listening).toBe(false)
   })
+
+  it('uses injected auth configuration in OTP endpoint behavior', async () => {
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: async () => [{ requestCount: 0 }],
+        }),
+      }),
+      insert: () => ({ values: async () => undefined }),
+    } as unknown as Db
+    const app = await buildApp({
+      db,
+      jwtSecret: 'test-secret',
+      authConfig: {
+        accessTokenTtlSeconds: 60,
+        refreshTokenTtlSeconds: 120,
+        otpTtlSeconds: 37,
+        exposeDevOtpCode: true,
+      },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/otp/request',
+      payload: { phoneNumber: '+15555550123' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      expiresInSeconds: 37,
+      devCode: expect.stringMatching(/^\d{6}$/),
+    })
+  })
 })
