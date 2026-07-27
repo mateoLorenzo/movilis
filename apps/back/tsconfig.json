@@ -4,8 +4,12 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": ".",
-    "outDir": "dist"
+    "outDir": "dist",
+    "declaration": true,
+    "sourceMap": true,
+    "noEmit": false,
+    "strict": true
   },
-  "include": ["**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "include": ["*.ts", "modules/**/*.ts"],
+  "exclude": ["dist", "test", "**/*.test.ts", "vitest*.ts"]
 }

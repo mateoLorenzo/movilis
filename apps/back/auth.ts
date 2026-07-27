@@ -1,8 +1,10 @@
 import fastifyJwt from '@fastify/jwt'
 import type { FastifyInstance } from 'fastify'
 
-// TODO: Consider moving authConfig to a separate config file if it grows significantly in the future
-export const authConfig = {
+import type { AuthConfig } from './config.js'
+
+// Existing route code consumes this until endpoint behavior adopts app.authConfig.
+export const authConfig: AuthConfig = {
   accessTokenTtlSeconds: readPositiveIntEnv(
     'ACCESS_TOKEN_TTL_SECONDS',
     15 * 60,
@@ -30,17 +32,11 @@ declare module '@fastify/jwt' {
   }
 }
 
-export async function registerAuth(app: FastifyInstance) {
-  const secret = process.env.JWT_SECRET
-
-  if (!secret) {
-    throw new Error('JWT_SECRET is required')
-  }
-
-  await app.register(fastifyJwt, { secret })
+export async function registerAuth(app: FastifyInstance, jwtSecret: string) {
+  await app.register(fastifyJwt, { secret: jwtSecret })
 }
 
-function readPositiveIntEnv(name: string, fallback: number) {
+function readPositiveIntEnv(name: string, fallback: number): number {
   const rawValue = process.env[name]
 
   if (!rawValue) {

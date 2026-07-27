@@ -1,31 +1,26 @@
 import 'dotenv/config'
 
-import fastify from 'fastify'
-
-import { registerAuth } from './auth.js'
-import { registerDb } from './db.js'
-import authRoutes from './modules/auth/auth.routes.js'
-import tripsRoutes from './modules/trips/trips.routes.js'
-import usersRoutes from './modules/users/users.routes.js'
-
-const server = fastify({
-  logger: true,
-})
+import { buildApp } from './app.js'
+import { loadConfig } from './config.js'
+import { createDatabase } from './db.js'
 
 async function start() {
+  const config = loadConfig(process.env)
+  const database = await createDatabase(config.databaseUrl)
+  const app = await buildApp({
+    db: database.db,
+    jwtSecret: config.jwtSecret,
+    authConfig: config.auth,
+    closeDatabase: database.close,
+  })
+
   try {
-    await registerDb(server)
-    await registerAuth(server)
-
-    server.register(authRoutes, { prefix: '/auth' })
-    server.register(tripsRoutes, { prefix: '/trips' })
-    server.register(usersRoutes, { prefix: '/users' })
-
-    const address = await server.listen({ port: 8080 })
-    server.log.info(`Server listening at ${address}`)
+    const address = await app.listen({ port: config.port, host: '0.0.0.0' })
+    app.log.info({ address }, 'Server listening')
   } catch (error) {
-    server.log.error(error)
-    process.exit(1)
+    app.log.error(error)
+    await app.close()
+    process.exitCode = 1
   }
 }
 
