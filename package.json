@@ -11,7 +11,9 @@
     "back:dev": "pnpm --filter @movilis/back dev",
     "db:generate": "pnpm --filter @movilis/db generate",
     "db:migrate": "pnpm --filter @movilis/db migrate",
-    "build": "pnpm --filter @movilis/shared build && pnpm --filter @movilis/db build && pnpm --filter @movilis/back build"
+    "build": "pnpm --filter @movilis/shared build && pnpm --filter @movilis/db build && pnpm --filter @movilis/back build",
+    "typecheck": "pnpm --filter @movilis/shared typecheck && pnpm --filter @movilis/db typecheck && pnpm --filter @movilis/back typecheck && pnpm --filter @movilis/mobile typecheck",
+    "test": "pnpm --filter @movilis/shared test && pnpm --filter @movilis/back test && pnpm --filter @movilis/mobile test"
   },
   "packageManager": "pnpm@11.0.9"
 }
