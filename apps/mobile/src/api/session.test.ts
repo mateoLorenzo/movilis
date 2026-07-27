@@ -92,6 +92,69 @@ describe('SessionCoordinator restoration', () => {
 })
 
 describe('SessionCoordinator authenticated requests', () => {
+  it('retains credentials when restore and request share a recoverable refresh failure', async () => {
+    const { session, refresh, tokenStore } = setup()
+    let rejectRefresh!: (reason: unknown) => void
+    refresh.mockImplementation(
+      () => new Promise((_resolve, reject) => (rejectRefresh = reject)),
+    )
+
+    const restoring = session.restore()
+    const requesting = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+    rejectRefresh(new NetworkError('/auth/refresh'))
+
+    const results = await Promise.allSettled([restoring, requesting])
+    expect(results).toEqual([
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.any(SessionRestoreError),
+      }),
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.any(NetworkError),
+      }),
+    ])
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(tokenStore.deleteRefreshToken).not.toHaveBeenCalled()
+    expect(tokenStore.refreshToken).toBe('refresh-1')
+    expect(session.getAccessToken()).toBeNull()
+  })
+
+  it('clears credentials once when restore and request share a terminal refresh failure', async () => {
+    const { session, refresh, tokenStore } = setup()
+    let rejectRefresh!: (reason: unknown) => void
+    refresh.mockImplementation(
+      () => new Promise((_resolve, reject) => (rejectRefresh = reject)),
+    )
+
+    const restoring = session.restore()
+    const requesting = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+    rejectRefresh(apiError(401, 'INVALID_REFRESH_TOKEN'))
+
+    const results = await Promise.allSettled([restoring, requesting])
+    expect(results).toEqual([
+      { status: 'fulfilled', value: null },
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.any(ApiError),
+      }),
+    ])
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(tokenStore.deleteRefreshToken).toHaveBeenCalledOnce()
+    expect(tokenStore.refreshToken).toBeNull()
+    expect(session.getAccessToken()).toBeNull()
+  })
+
   it('fails locally without calling the protected endpoint when no credentials exist', async () => {
     const { session, transport } = setup(null)
     await expect(
@@ -219,7 +282,7 @@ describe('SessionCoordinator authenticated requests', () => {
     expect(refresh).toHaveBeenCalledOnce()
   })
 
-  it('keeps failed concurrent 401 recovery single-flight through credential clearing', async () => {
+  it('keeps terminal concurrent 401 recovery single-flight through credential clearing', async () => {
     const { session, transport, refresh, tokenStore } = setup()
     await session.accept(rotated)
     let rejectRefresh!: (reason: unknown) => void
@@ -255,7 +318,7 @@ describe('SessionCoordinator authenticated requests', () => {
     })
     await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
 
-    rejectRefresh(new NetworkError('/auth/refresh'))
+    rejectRefresh(apiError(401, 'INVALID_REFRESH_TOKEN'))
     await vi.waitFor(() =>
       expect(tokenStore.deleteRefreshToken).toHaveBeenCalledOnce(),
     )
@@ -266,11 +329,11 @@ describe('SessionCoordinator authenticated requests', () => {
     expect(results).toEqual([
       expect.objectContaining({
         status: 'rejected',
-        reason: expect.any(NetworkError),
+        reason: expect.any(ApiError),
       }),
       expect.objectContaining({
         status: 'rejected',
-        reason: expect.any(NetworkError),
+        reason: expect.any(ApiError),
       }),
     ])
     expect(refresh).toHaveBeenCalledOnce()
@@ -332,7 +395,7 @@ describe('SessionCoordinator authenticated requests', () => {
     )
   })
 
-  it('clears credentials when refresh recovery fails', async () => {
+  it('retains credentials when refresh recovery has a recoverable failure', async () => {
     const { session, transport, refresh, tokenStore } = setup()
     await session.accept(rotated)
     vi.mocked(transport.request).mockRejectedValueOnce(apiError(401))
@@ -344,12 +407,51 @@ describe('SessionCoordinator authenticated requests', () => {
         responseSchema,
       }),
     ).rejects.toBeInstanceOf(NetworkError)
-    expect(tokenStore.deleteRefreshToken).toHaveBeenCalledOnce()
+    expect(tokenStore.deleteRefreshToken).not.toHaveBeenCalled()
+    expect(tokenStore.refreshToken).toBe('refresh-2')
     expect(session.getAccessToken()).toBeNull()
   })
 })
 
 describe('SessionCoordinator logout', () => {
+  it('removes a refresh token persisted after logout invalidates its epoch', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    tokenStore.setRefreshToken.mockClear()
+    let releasePersistence!: () => void
+    tokenStore.setRefreshToken.mockImplementation(
+      (token) =>
+        new Promise((resolve) => {
+          releasePersistence = () => {
+            tokenStore.refreshToken = token
+            resolve()
+          }
+        }),
+    )
+    refresh.mockResolvedValue({
+      ...rotated,
+      accessToken: 'access-3',
+      refreshToken: 'refresh-3',
+    })
+    transport.request.mockRejectedValueOnce(apiError(401))
+
+    const request = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() =>
+      expect(tokenStore.setRefreshToken).toHaveBeenCalledWith('refresh-3'),
+    )
+
+    await session.logout()
+    releasePersistence()
+
+    await expect(request).rejects.toBeInstanceOf(UnauthenticatedError)
+    expect(tokenStore.refreshToken).toBeNull()
+    expect(session.getAccessToken()).toBeNull()
+  })
+
   it('prevents an in-flight refresh from restoring credentials after logout', async () => {
     const { session, transport, refresh, tokenStore } = setup()
     await session.accept(rotated)

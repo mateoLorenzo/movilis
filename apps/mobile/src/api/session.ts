@@ -41,7 +41,6 @@ export function createSessionCoordinator({
 }: SessionDependencies): SessionCoordinator {
   let accessToken: string | null = null
   let refreshFlight: Promise<AuthSession> | null = null
-  let clearRefreshFailure = false
   let sessionEpoch = 0
 
   async function clearCredentials(): Promise<void> {
@@ -55,10 +54,20 @@ export function createSessionCoordinator({
     return session.user
   }
 
-  async function refreshOnce(clearOnFailure = false): Promise<AuthSession> {
-    if (clearOnFailure) clearRefreshFailure = true
+  async function acceptRefresh(
+    session: AuthSession,
+    refreshEpoch: number,
+  ): Promise<void> {
+    await tokenStore.setRefreshToken(session.refreshToken)
+    if (sessionEpoch !== refreshEpoch) {
+      await tokenStore.deleteRefreshToken()
+      throw new UnauthenticatedError()
+    }
+    accessToken = session.accessToken
+  }
+
+  async function refreshOnce(): Promise<AuthSession> {
     if (refreshFlight) return refreshFlight
-    clearRefreshFailure = clearOnFailure
     const refreshEpoch = sessionEpoch
     const flight = (async () => {
       try {
@@ -66,10 +75,12 @@ export function createSessionCoordinator({
         if (!refreshToken) throw new UnauthenticatedError()
         const next = await refresh(refreshToken)
         if (sessionEpoch !== refreshEpoch) throw new UnauthenticatedError()
-        await accept(next)
+        await acceptRefresh(next, refreshEpoch)
         return next
       } catch (error) {
-        if (clearRefreshFailure) await clearCredentials()
+        if (error instanceof ApiError || error instanceof ResponseContractError) {
+          await clearCredentials()
+        }
         throw error
       }
     })()
@@ -79,7 +90,6 @@ export function createSessionCoordinator({
     } finally {
       if (refreshFlight === flight) {
         refreshFlight = null
-        clearRefreshFailure = false
       }
     }
   }
@@ -103,7 +113,6 @@ export function createSessionCoordinator({
         throw new SessionRestoreError(error)
       }
       if (error instanceof ApiError || error instanceof ResponseContractError) {
-        await clearCredentials()
         return null
       }
       throw new SessionRestoreError(error)
@@ -112,12 +121,13 @@ export function createSessionCoordinator({
 
   async function requireAccessToken(): Promise<string> {
     if (accessToken) return accessToken
-    return (await refreshOnce(true)).accessToken
+    return (await refreshOnce()).accessToken
   }
 
   async function recoverFrom401(rejectedToken: string): Promise<string> {
     if (accessToken && accessToken !== rejectedToken) return accessToken
-    return (await refreshOnce(true)).accessToken
+    accessToken = null
+    return (await refreshOnce()).accessToken
   }
 
   async function request(
