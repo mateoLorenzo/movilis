@@ -88,6 +88,9 @@ export type LogoutRequest = v.InferOutput<typeof logoutRequestSchema>
 export const logoutBodySchema = logoutRequestSchema
 export type LogoutBody = v.InferOutput<typeof logoutBodySchema>
 
+export const logoutResponseSchema = v.null()
+export type LogoutResponse = v.InferOutput<typeof logoutResponseSchema>
+
 export const requestOtpContract = {
   request: requestOtpRequestSchema,
   success: requestOtpResponseSchema,
@@ -114,6 +117,6 @@ export const refreshContract = {
 
 export const logoutContract = {
   request: logoutRequestSchema,
-  success: null,
+  success: logoutResponseSchema,
   error: apiErrorSchema,
 } as const

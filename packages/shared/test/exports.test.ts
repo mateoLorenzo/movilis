@@ -30,6 +30,7 @@ describe('@movilis/shared public exports', () => {
       'logoutBodySchema',
       'logoutContract',
       'logoutRequestSchema',
+      'logoutResponseSchema',
       'moneySchema',
       'ownedTripPageSchema',
       'ownedTripSchema',

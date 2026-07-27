@@ -123,10 +123,27 @@ describe.sequential('authentication endpoint contracts', () => {
     const refreshed = await app.inject({ method: 'POST', url: '/auth/refresh', payload: { refreshToken: original } })
     expect(refreshed.statusCode).toBe(200)
     expect(safeParse(authSessionSchema, refreshed.json()).success).toBe(true)
-    expect(refreshed.json<{ refreshToken: string }>().refreshToken).not.toBe(original)
+    const replacement = refreshed.json<{ refreshToken: string }>().refreshToken
+    expect(replacement).not.toBe(original)
     const reused = await app.inject({ method: 'POST', url: '/auth/refresh', payload: { refreshToken: original } })
     expect(reused.statusCode).toBe(401)
-    expect(reused.json()).toMatchObject({ code: 'INVALID_REFRESH_TOKEN' })
+    const error = reused.json()
+    expect(error).toMatchObject({
+      code: 'INVALID_REFRESH_TOKEN',
+      requestId: expect.any(String),
+    })
+    expect(safeParse(apiErrorSchema, error).success).toBe(true)
+    expect(reused.headers['x-request-id']).toBe(error.requestId)
+
+    const revokedReplacement = await app.inject({
+      method: 'POST',
+      url: '/auth/refresh',
+      payload: { refreshToken: replacement },
+    })
+    expect(revokedReplacement.statusCode).toBe(401)
+    expect(revokedReplacement.json()).toMatchObject({
+      code: 'INVALID_REFRESH_TOKEN',
+    })
   })
 
   it('POST /auth/logout returns 204 and revokes the refresh token', async () => {

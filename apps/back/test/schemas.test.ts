@@ -9,6 +9,7 @@ import {
   getUserByIdResponseSchema,
   listMyTripsResponseSchema,
   logoutRequestSchema,
+  logoutResponseSchema,
   refreshRequestSchema,
   refreshResponseSchema,
   requestOtpRequestSchema,
@@ -99,7 +100,10 @@ describe('schema adapter', () => {
       body: toFastifySchema(refreshRequestSchema),
       response: { 200: toFastifySchema(refreshResponseSchema) },
     })
-    expect(logoutSchema.body).toEqual(toFastifySchema(logoutRequestSchema))
+    expect(logoutSchema).toMatchObject({
+      body: toFastifySchema(logoutRequestSchema),
+      response: { 204: toFastifySchema(logoutResponseSchema) },
+    })
     expect(meSchema.response[200]).toEqual(toFastifySchema(getMeResponseSchema))
     expect(createTripSchema).toMatchObject({
       body: toFastifySchema(createTripRequestSchema),

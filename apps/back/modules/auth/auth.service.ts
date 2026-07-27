@@ -155,47 +155,31 @@ export const authService = {
     const now = new Date()
     const tokenHash = hashToken(refreshToken)
 
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const session = await tx.query.authSessions.findFirst({
         where: (authSessions, { eq }) =>
           eq(authSessions.refreshTokenHash, tokenHash),
       })
 
       if (!session) {
-        throw new AppError(
-          'INVALID_REFRESH_TOKEN',
-          401,
-          'Invalid refresh token',
-        )
+        return null
       }
 
       if (session.revokedAt) {
         await revokeAllUserSessions(tx, session.userId)
-        throw new AppError(
-          'INVALID_REFRESH_TOKEN',
-          401,
-          'Invalid refresh token',
-        )
+        return null
       }
 
       if (session.expiresAt <= now) {
         await revokeSession(tx, session.id)
-        throw new AppError(
-          'INVALID_REFRESH_TOKEN',
-          401,
-          'Invalid refresh token',
-        )
+        return null
       }
 
       const user = await findActiveUserById(tx, session.userId)
 
       if (!user) {
         await revokeAllUserSessions(tx, session.userId)
-        throw new AppError(
-          'INVALID_REFRESH_TOKEN',
-          401,
-          'Invalid refresh token',
-        )
+        return null
       }
 
       const nextSession = createSessionValues(user.id, refreshTokenTtlSeconds)
@@ -208,17 +192,24 @@ export const authService = {
         .returning({ id: authSessions.id })
 
       if (!revokedSession) {
-        throw new AppError(
-          'INVALID_REFRESH_TOKEN',
-          401,
-          'Invalid refresh token',
-        )
+        await revokeAllUserSessions(tx, session.userId)
+        return null
       }
 
       await tx.insert(authSessions).values(nextSession.session)
 
       return { user, refreshToken: nextSession.refreshToken }
     })
+
+    if (!result) {
+      throw new AppError(
+        'INVALID_REFRESH_TOKEN',
+        401,
+        'Invalid refresh token',
+      )
+    }
+
+    return result
   },
 
   async logout(db: DbClient, refreshToken: string) {

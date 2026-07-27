@@ -10,6 +10,7 @@ import {
   logoutContract,
   logoutBodySchema,
   logoutRequestSchema,
+  logoutResponseSchema,
   refreshContract,
   refreshBodySchema,
   refreshRequestSchema,
@@ -165,6 +166,12 @@ describe('refresh, logout, me, and contract wiring', () => {
     ).toBe(false)
   })
 
+  it('defines logout success as an authoritative null response', () => {
+    expect(v.parse(logoutResponseSchema, null)).toBeNull()
+    expect(v.safeParse(logoutResponseSchema, undefined).success).toBe(false)
+    expect(logoutContract.success).toBe(logoutResponseSchema)
+  })
+
   it('pairs every endpoint with its exact success and canonical error', () => {
     expect(requestOtpContract.request).toBe(requestOtpRequestSchema)
     expect(requestOtpBodySchema).toBe(requestOtpRequestSchema)
@@ -178,7 +185,6 @@ describe('refresh, logout, me, and contract wiring', () => {
     expect(refreshContract.success).toBe(authSessionSchema)
     expect(refreshBodySchema).toBe(refreshRequestSchema)
     expect(refreshResponseSchema).toBe(authSessionSchema)
-    expect(logoutContract.success).toBeNull()
     expect(logoutBodySchema).toBe(logoutRequestSchema)
     expect(getMeContract.request).toBeNull()
 
