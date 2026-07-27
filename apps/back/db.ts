@@ -1,4 +1,4 @@
-import { createDb, type Db } from '@carpooling/db'
+import { createDb, type Db } from '@movilis/db'
 import type { FastifyInstance } from 'fastify'
 import { Pool } from 'pg'
 

@@ -1,4 +1,4 @@
-import { trips } from '@carpooling/db'
+import { trips } from '@movilis/db'
 import type { ConversionConfig } from '@valibot/to-json-schema'
 import { toJsonSchema } from '@valibot/to-json-schema'
 import type { Table } from 'drizzle-orm'

@@ -1,8 +1,8 @@
 import { integer, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
 
-import { cities } from './cities'
-import { tripReservationStatusEnum, tripStatusEnum } from './enums'
-import { users } from './users'
+import { cities } from './cities.js'
+import { tripReservationStatusEnum, tripStatusEnum } from './enums.js'
+import { users } from './users.js'
 
 /** Trips published by drivers between two cities with seat and pricing information. */
 export const trips = pgTable('trips', {

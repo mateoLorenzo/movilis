@@ -1,3 +1,11 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json"
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

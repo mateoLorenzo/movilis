@@ -1,4 +1,4 @@
-import { trips, type Db } from '@carpooling/db'
+import { trips, type Db } from '@movilis/db'
 import { desc, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 

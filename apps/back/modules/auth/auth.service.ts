@@ -1,4 +1,4 @@
-import { authSessions, otpChallenges, users, type Db } from '@carpooling/db'
+import { authSessions, otpChallenges, users, type Db } from '@movilis/db'
 import { and, count, eq, gte, isNull } from 'drizzle-orm'
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 

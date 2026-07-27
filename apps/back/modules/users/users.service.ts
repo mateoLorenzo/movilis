@@ -1,4 +1,4 @@
-import type { Db } from '@carpooling/db'
+import type { Db } from '@movilis/db'
 
 export const usersService = {
   async getById(db: Db, id: string) {
