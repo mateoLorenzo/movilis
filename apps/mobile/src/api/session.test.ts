@@ -522,6 +522,144 @@ describe('SessionCoordinator authenticated requests', () => {
     )
     expect(refresh).toHaveBeenCalledTimes(2)
   })
+
+  it('retains T4 when request B persists it before a delayed T3 retry fails', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    refresh
+      .mockResolvedValueOnce({
+        ...rotated,
+        accessToken: 'access-3',
+        refreshToken: 'refresh-3',
+      })
+      .mockResolvedValueOnce({
+        ...rotated,
+        accessToken: 'access-4',
+        refreshToken: 'refresh-4',
+      })
+    let releaseT4Persistence!: () => void
+    tokenStore.setRefreshToken.mockImplementation(
+      (token) =>
+        new Promise((resolve) => {
+          if (token !== 'refresh-4') {
+            tokenStore.refreshToken = token
+            resolve()
+            return
+          }
+          releaseT4Persistence = () => {
+            tokenStore.refreshToken = token
+            resolve()
+          }
+        }),
+    )
+    let rejectT3Retry!: (reason: unknown) => void
+    transport.request.mockImplementation(async (options: any) => {
+      const token = options.auth.accessToken
+      if (options.path === '/trips/mine' && token === 'access-2') {
+        throw apiError(401)
+      }
+      if (options.path === '/trips/mine' && token === 'access-3') {
+        return new Promise((_resolve, reject) => {
+          rejectT3Retry = reject
+        })
+      }
+      if (options.path === '/auth/me' && token === 'access-3') {
+        throw apiError(401)
+      }
+      return { ok: true }
+    })
+
+    const requestA = session.request({
+      method: 'GET',
+      path: '/trips/mine',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(rejectT3Retry).toBeTypeOf('function'))
+    const requestB = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() =>
+      expect(tokenStore.setRefreshToken).toHaveBeenCalledWith('refresh-4'),
+    )
+
+    rejectT3Retry(apiError(401))
+    await expect(requestA).rejects.toBeInstanceOf(ApiError)
+    releaseT4Persistence()
+    await expect(requestB).resolves.toEqual({ ok: true })
+    expect(session.getAccessToken()).toBe('access-4')
+    expect(tokenStore.refreshToken).toBe('refresh-4')
+    await expect(
+      session.request({
+        method: 'GET',
+        path: '/auth/me',
+        responseSchema,
+      }),
+    ).resolves.toEqual({ ok: true })
+    expect(transport.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({ auth: { accessToken: 'access-4' } }),
+    )
+  })
+
+  it('does not queue stale T3 deletion during T4 persistence', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    refresh
+      .mockResolvedValueOnce({
+        ...rotated,
+        accessToken: 'access-3',
+        refreshToken: 'refresh-3',
+      })
+      .mockResolvedValueOnce({
+        ...rotated,
+        accessToken: 'access-4',
+        refreshToken: 'refresh-4',
+      })
+    let releaseT4Persistence!: () => void
+    tokenStore.setRefreshToken.mockImplementation(
+      (token) =>
+        new Promise((resolve) => {
+          if (token !== 'refresh-4') {
+            tokenStore.refreshToken = token
+            resolve()
+            return
+          }
+          releaseT4Persistence = () => {
+            tokenStore.refreshToken = token
+            resolve()
+          }
+        }),
+    )
+    let rejectT3Retry!: (reason: unknown) => void
+    transport.request.mockImplementation(async (options: any) => {
+      if (options.auth.accessToken === 'access-2') throw apiError(401)
+      if (options.auth.accessToken === 'access-3') {
+        return new Promise((_resolve, reject) => {
+          rejectT3Retry = reject
+        })
+      }
+      return { ok: true }
+    })
+
+    const requestA = session.request({
+      method: 'GET',
+      path: '/trips/mine',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(rejectT3Retry).toBeTypeOf('function'))
+    const restoringT4 = session.restore()
+    await vi.waitFor(() =>
+      expect(tokenStore.setRefreshToken).toHaveBeenCalledWith('refresh-4'),
+    )
+
+    rejectT3Retry(apiError(401))
+    releaseT4Persistence()
+    await expect(requestA).rejects.toBeInstanceOf(ApiError)
+    await expect(restoringT4).resolves.toEqual(user)
+    expect(session.getAccessToken()).toBe('access-4')
+    expect(tokenStore.refreshToken).toBe('refresh-4')
+  })
 })
 
 describe('SessionCoordinator logout', () => {
