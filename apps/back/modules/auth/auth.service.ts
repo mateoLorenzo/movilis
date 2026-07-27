@@ -1,5 +1,5 @@
 import { authSessions, otpChallenges, users, type Db } from '@movilis/db'
-import { and, count, eq, gte, isNull } from 'drizzle-orm'
+import { and, count, desc, eq, gt, gte, isNull, sql } from 'drizzle-orm'
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
 import { AppError } from '../../errors.js'
@@ -22,31 +22,36 @@ export const authService = {
   async requestOtp(db: Db, phoneNumber: string, otpTtlSeconds: number) {
     const now = new Date()
     const requestWindowStart = new Date(now.getTime() - otpRequestWindowMs)
-    const [{ requestCount }] = await db
-      .select({ requestCount: count() })
-      .from(otpChallenges)
-      .where(
-        and(
-          eq(otpChallenges.phoneNumber, phoneNumber),
-          gte(otpChallenges.createdAt, requestWindowStart),
-        ),
-      )
-
-    if (requestCount >= maxOtpRequestsPerWindow) {
-      throw new AppError(
-        'RATE_LIMITED',
-        'Too many OTP requests. Try again later.',
-      )
-    }
-
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
     const expiresAt = new Date(now.getTime() + otpTtlSeconds * 1000)
 
-    await db.insert(otpChallenges).values({
-      id: randomUUID(),
-      phoneNumber,
-      codeHash: hashOtp(phoneNumber, code),
-      expiresAt,
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${phoneNumber}, 0))`,
+      )
+      const [{ requestCount }] = await tx
+        .select({ requestCount: count() })
+        .from(otpChallenges)
+        .where(
+          and(
+            eq(otpChallenges.phoneNumber, phoneNumber),
+            gte(otpChallenges.createdAt, requestWindowStart),
+          ),
+        )
+
+      if (requestCount >= maxOtpRequestsPerWindow) {
+        throw new AppError(
+          'RATE_LIMITED',
+          'Too many OTP requests. Try again later.',
+        )
+      }
+
+      await tx.insert(otpChallenges).values({
+        id: randomUUID(),
+        phoneNumber,
+        codeHash: hashOtp(phoneNumber, code),
+        expiresAt,
+      })
     })
 
     return { code, expiresAt }
@@ -59,50 +64,55 @@ export const authService = {
     refreshTokenTtlSeconds: number,
   ) {
     const now = new Date()
-    const challenge = await db.query.otpChallenges.findFirst({
-      where: (otpChallenges, { and, eq, gt, isNull }) =>
-        and(
-          eq(otpChallenges.phoneNumber, phoneNumber),
-          isNull(otpChallenges.consumedAt),
-          gt(otpChallenges.expiresAt, now),
-        ),
-      orderBy: (otpChallenges, { desc }) => [desc(otpChallenges.createdAt)],
-    })
+    const result = await db.transaction(async (tx) => {
+      const [challenge] = await tx
+        .select()
+        .from(otpChallenges)
+        .where(
+          and(
+            eq(otpChallenges.phoneNumber, phoneNumber),
+            isNull(otpChallenges.consumedAt),
+            gt(otpChallenges.expiresAt, now),
+          ),
+        )
+        .orderBy(desc(otpChallenges.createdAt))
+        .limit(1)
+        .for('update')
 
-    if (!challenge) {
-      throw new AppError('INVALID_OTP', 'Invalid or expired OTP code')
-    }
+      if (!challenge) return { type: 'invalid' as const }
 
-    if (challenge.codeHash !== hashOtp(phoneNumber, code)) {
-      const attempts = challenge.attempts + 1
-      await db
+      if (challenge.codeHash !== hashOtp(phoneNumber, code)) {
+        const attempts = challenge.attempts + 1
+        await tx
+          .update(otpChallenges)
+          .set({
+            attempts,
+            consumedAt: attempts >= maxOtpAttempts ? now : null,
+          })
+          .where(eq(otpChallenges.id, challenge.id))
+        return { type: 'invalid' as const }
+      }
+
+      await tx
         .update(otpChallenges)
-        .set({
-          attempts,
-          consumedAt: attempts >= maxOtpAttempts ? now : null,
-        })
+        .set({ consumedAt: now })
         .where(eq(otpChallenges.id, challenge.id))
 
+      const user = await findActiveUserByPhoneNumber(tx, phoneNumber)
+      if (!user) return { type: 'requiresSignup' as const, phoneNumber }
+
+      const refreshToken = await createRefreshSession(
+        tx,
+        user.id,
+        refreshTokenTtlSeconds,
+      )
+      return { type: 'authenticated' as const, user, refreshToken }
+    })
+
+    if (result.type === 'invalid') {
       throw new AppError('INVALID_OTP', 'Invalid or expired OTP code')
     }
-
-    await db
-      .update(otpChallenges)
-      .set({ consumedAt: now })
-      .where(eq(otpChallenges.id, challenge.id))
-
-    const user = await findActiveUserByPhoneNumber(db, phoneNumber)
-
-    if (!user) {
-      return { type: 'requiresSignup' as const, phoneNumber }
-    }
-
-    const refreshToken = await createRefreshSession(
-      db,
-      user.id,
-      refreshTokenTtlSeconds,
-    )
-    return { type: 'authenticated' as const, user, refreshToken }
+    return result
   },
 
   async completeSignup(
@@ -127,16 +137,24 @@ export const authService = {
       throw new AppError('CITY_NOT_FOUND', 'City not found')
     }
 
-    const [user] = await db
-      .insert(users)
-      .values({
-        id: randomUUID(),
-        phoneNumber: input.phoneNumber,
-        fullName: input.fullName,
-        cityId: input.cityId,
-        profilePhotoUrl: input.profilePhotoUrl,
-      })
-      .returning()
+    let user: typeof users.$inferSelect
+    try {
+      ;[user] = await db
+        .insert(users)
+        .values({
+          id: randomUUID(),
+          phoneNumber: input.phoneNumber,
+          fullName: input.fullName,
+          cityId: input.cityId,
+          profilePhotoUrl: input.profilePhotoUrl,
+        })
+        .returning()
+    } catch (error) {
+      if (isPostgresUniqueViolation(error)) {
+        throw new AppError('USER_ALREADY_EXISTS', 'User already exists')
+      }
+      throw error
+    }
 
     const refreshToken = await createRefreshSession(
       db,
@@ -227,7 +245,7 @@ export const authService = {
 }
 
 async function createRefreshSession(
-  db: Db,
+  db: DbClient,
   userId: string,
   refreshTokenTtlSeconds: number,
 ) {
@@ -284,4 +302,15 @@ function hashOtp(phoneNumber: string, code: string) {
 
 function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
+}
+
+function isPostgresUniqueViolation(error: unknown): boolean {
+  let current = error
+  const seen = new Set<unknown>()
+  while (typeof current === 'object' && current !== null && !seen.has(current)) {
+    seen.add(current)
+    if ('code' in current && current.code === '23505') return true
+    current = 'cause' in current ? current.cause : undefined
+  }
+  return false
 }

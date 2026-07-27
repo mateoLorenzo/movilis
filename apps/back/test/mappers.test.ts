@@ -57,6 +57,12 @@ describe('user mapping', () => {
       cityId: 'city-1',
     })
   })
+
+  it('rejects a non-finite rating from persistence', () => {
+    expect(() =>
+      toPrivateUser({ ...userRow, ratingAverage: Number.NaN }),
+    ).toThrow()
+  })
 })
 
 describe('trip mapping', () => {
@@ -96,5 +102,27 @@ describe('trip mapping', () => {
       createdAt: '2026-07-26T13:00:00.000Z',
       updatedAt: '2026-07-26T14:00:00.000Z',
     })
+  })
+
+  it('rejects persistence rows that violate the shared trip contract', () => {
+    expect(() =>
+      toOwnedTrip({
+        id: 'trip-1',
+        driverId: 'user-1',
+        originCityId: 'city-1',
+        destinationCityId: 'city-2',
+        departureAt: new Date('2026-08-01T10:00:00-03:00'),
+        totalSeats: 2,
+        availableSeats: 3,
+        pricePerSeat: 8500,
+        contactPhoneNumber: '+541140392404',
+        notes: null,
+        status: 'scheduled',
+        cancelledAt: null,
+        completedAt: null,
+        createdAt: new Date('2026-07-26T10:00:00-03:00'),
+        updatedAt: new Date('2026-07-26T11:00:00-03:00'),
+      }),
+    ).toThrow()
   })
 })

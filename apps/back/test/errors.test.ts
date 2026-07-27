@@ -76,6 +76,44 @@ describe('canonical error handling', () => {
     expect(safeParse(apiErrorSchema, body).success).toBe(true)
   })
 
+  it.each([
+    {
+      name: 'malformed JSON',
+      headers: { 'content-type': 'application/json' },
+      payload: '{"phoneNumber":',
+      secret: 'phoneNumber',
+    },
+    {
+      name: 'unsupported content type',
+      headers: { 'content-type': 'application/xml' },
+      payload: 'private request body',
+      secret: 'private request body',
+    },
+    {
+      name: 'an oversized body',
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ secret: 'x'.repeat(1_050_000) }),
+      secret: 'xxxxxxxxxxxxxxxx',
+    },
+  ])('maps $name to a fixed canonical client error', async ({ headers, payload, secret }) => {
+    const app = await createTestApp()
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/otp/request',
+      headers,
+      payload,
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Request validation failed',
+      requestId: response.headers['x-request-id'],
+    })
+    expect(response.body).not.toContain(secret)
+    expect(safeParse(apiErrorSchema, response.json()).success).toBe(true)
+  })
+
   it('hides unexpected exception details and logs the original error', async () => {
     const app = await createTestApp()
     const log = vi.spyOn(app.log, 'error')

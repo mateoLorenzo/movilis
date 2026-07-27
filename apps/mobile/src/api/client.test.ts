@@ -269,6 +269,38 @@ describe('HttpTransport', () => {
     expect(fetch).toHaveBeenCalledOnce()
   })
 
+  it('does not retain secrets from an arbitrary fetch exception graph', async () => {
+    const fetchFailure = new Error('Authorization: Bearer access-secret')
+    Object.assign(fetchFailure, {
+      refreshToken: 'refresh-secret',
+      requestBody: '{"password":"body-secret"}',
+      cause: new Error('nested-secret'),
+    })
+    const transport = createHttpTransport({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock(async () => {
+        throw fetchFailure
+      }),
+    })
+
+    const error = await transport
+      .request({
+        method: 'POST',
+        path: '/auth/refresh',
+        body: { refreshToken: 'refresh-secret' },
+        auth: { accessToken: 'access-secret' },
+        responseSchema: resultSchema,
+      })
+      .catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(NetworkError)
+    const graph = inspectErrorGraph(error)
+    expect(graph).not.toContain('access-secret')
+    expect(graph).not.toContain('refresh-secret')
+    expect(graph).not.toContain('body-secret')
+    expect(graph).not.toContain('nested-secret')
+  })
+
   it('preserves JSON serialization failures without starting a fetch', async () => {
     const fetch = fetchMock(async () => jsonResponse({ id: 'user-1' }))
     const transport = createHttpTransport({
@@ -394,3 +426,22 @@ describe('HttpTransport', () => {
     await expectation
   })
 })
+
+function inspectErrorGraph(value: unknown): string {
+  const seen = new Set<unknown>()
+  const values: string[] = []
+  function visit(current: unknown) {
+    if (typeof current === 'string') {
+      values.push(current)
+      return
+    }
+    if ((typeof current !== 'object' && typeof current !== 'function') || current === null || seen.has(current)) return
+    seen.add(current)
+    for (const key of Object.getOwnPropertyNames(current)) {
+      values.push(key)
+      visit((current as Record<string, unknown>)[key])
+    }
+  }
+  visit(value)
+  return values.join('\n')
+}

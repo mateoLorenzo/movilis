@@ -414,6 +414,78 @@ describe('SessionCoordinator authenticated requests', () => {
 })
 
 describe('SessionCoordinator logout', () => {
+  it('keeps a login accepted after logout begins', async () => {
+    const { session, revoke, tokenStore } = setup()
+    await session.accept(rotated)
+    let finishRevoke!: () => void
+    revoke.mockImplementation(
+      () =>
+        new Promise<undefined>((resolve) => {
+          finishRevoke = () => resolve(undefined)
+        }),
+    )
+
+    const logout = session.logout()
+    await vi.waitFor(() => expect(revoke).toHaveBeenCalledWith('refresh-2'))
+    const login = {
+      ...rotated,
+      accessToken: 'access-login',
+      refreshToken: 'refresh-login',
+    }
+    await session.accept(login)
+    finishRevoke()
+    await logout
+
+    expect(tokenStore.refreshToken).toBe('refresh-login')
+    expect(session.getAccessToken()).toBe('access-login')
+  })
+
+  it('does not let a stale terminal refresh failure clear a later login', async () => {
+    const { session, refresh, tokenStore } = setup()
+    let rejectRefresh!: (reason: unknown) => void
+    refresh.mockImplementation(
+      () => new Promise((_resolve, reject) => (rejectRefresh = reject)),
+    )
+
+    const restoring = session.restore()
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+    await session.accept({
+      ...rotated,
+      accessToken: 'access-login',
+      refreshToken: 'refresh-login',
+    })
+    rejectRefresh(apiError(401, 'INVALID_REFRESH_TOKEN'))
+
+    await expect(restoring).resolves.toBeNull()
+    expect(tokenStore.refreshToken).toBe('refresh-login')
+    expect(session.getAccessToken()).toBe('access-login')
+  })
+
+  it('does not let a stale refresh result replace a later login', async () => {
+    const { session, refresh, tokenStore } = setup()
+    let finishRefresh!: (value: AuthSession) => void
+    refresh.mockImplementation(
+      () => new Promise((resolve) => (finishRefresh = resolve)),
+    )
+
+    const restoring = session.restore()
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+    await session.accept({
+      ...rotated,
+      accessToken: 'access-login',
+      refreshToken: 'refresh-login',
+    })
+    finishRefresh({
+      ...rotated,
+      accessToken: 'access-stale',
+      refreshToken: 'refresh-stale',
+    })
+
+    await expect(restoring).rejects.toBeInstanceOf(SessionRestoreError)
+    expect(tokenStore.refreshToken).toBe('refresh-login')
+    expect(session.getAccessToken()).toBe('access-login')
+  })
+
   it('removes a refresh token persisted after logout invalidates its epoch', async () => {
     const { session, transport, refresh, tokenStore } = setup()
     await session.accept(rotated)
@@ -444,8 +516,9 @@ describe('SessionCoordinator logout', () => {
       expect(tokenStore.setRefreshToken).toHaveBeenCalledWith('refresh-3'),
     )
 
-    await session.logout()
+    const logout = session.logout()
     releasePersistence()
+    await logout
 
     await expect(request).rejects.toBeInstanceOf(UnauthenticatedError)
     expect(tokenStore.refreshToken).toBeNull()

@@ -34,8 +34,8 @@ export class ResponseContractError extends Error {
 export class NetworkError extends Error {
   readonly name = 'NetworkError'
 
-  constructor(readonly path: string, options?: ErrorOptions) {
-    super(`Network request to ${path} failed`, options)
+  constructor(readonly path: string) {
+    super(`Network request to ${path} failed`)
   }
 }
 

@@ -90,9 +90,9 @@ export function createHttpTransport({
           body: requestBody,
           signal: controller.signal,
         })
-      } catch (cause) {
+      } catch {
         throwAbortFailure(abortKind, options.path, timeoutMs)
-        throw new NetworkError(options.path, { cause })
+        throw new NetworkError(options.path)
       }
 
       if (!response.ok) {

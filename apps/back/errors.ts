@@ -56,6 +56,15 @@ export function registerErrorHandling(app: FastifyInstance) {
       )
     }
 
+    if (isRequestParsingError(error)) {
+      return sendError(
+        reply,
+        request,
+        'VALIDATION_ERROR',
+        'Request validation failed',
+      )
+    }
+
     if (error instanceof AppError) {
       return sendError(reply, request, error.code, error.message)
     }
@@ -71,6 +80,17 @@ export function registerErrorHandling(app: FastifyInstance) {
       'An unexpected error occurred',
     )
   })
+}
+
+function isRequestParsingError(error: unknown): error is FastifyError {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return false
+  }
+  return new Set([
+    'FST_ERR_CTP_BODY_TOO_LARGE',
+    'FST_ERR_CTP_INVALID_JSON_BODY',
+    'FST_ERR_CTP_INVALID_MEDIA_TYPE',
+  ]).has(error.code as string)
 }
 
 function isValidationError(

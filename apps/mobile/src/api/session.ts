@@ -42,14 +42,40 @@ export function createSessionCoordinator({
   let accessToken: string | null = null
   let refreshFlight: Promise<AuthSession> | null = null
   let sessionEpoch = 0
+  let credentialMutations = Promise.resolve()
 
-  async function clearCredentials(): Promise<void> {
+  function mutateCredentials(operation: () => Promise<void>): Promise<void> {
+    const result = credentialMutations.then(operation, operation)
+    credentialMutations = result.catch(() => undefined)
+    return result
+  }
+
+  function beginAuthoritativeTransition(): number {
+    sessionEpoch += 1
+    refreshFlight = null
+    return sessionEpoch
+  }
+
+  async function clearCredentials(epoch: number): Promise<void> {
+    if (sessionEpoch !== epoch) return
     accessToken = null
-    await tokenStore.deleteRefreshToken()
+    await mutateCredentials(async () => {
+      if (sessionEpoch === epoch) await tokenStore.deleteRefreshToken()
+    })
+  }
+
+  async function persistRefreshToken(token: string, epoch: number): Promise<void> {
+    await mutateCredentials(async () => {
+      if (sessionEpoch !== epoch) throw new UnauthenticatedError()
+      await tokenStore.setRefreshToken(token)
+      if (sessionEpoch !== epoch) throw new UnauthenticatedError()
+    })
   }
 
   async function accept(session: AuthSession): Promise<PrivateUser> {
-    await tokenStore.setRefreshToken(session.refreshToken)
+    const acceptEpoch = beginAuthoritativeTransition()
+    await persistRefreshToken(session.refreshToken, acceptEpoch)
+    if (sessionEpoch !== acceptEpoch) throw new UnauthenticatedError()
     accessToken = session.accessToken
     return session.user
   }
@@ -58,11 +84,7 @@ export function createSessionCoordinator({
     session: AuthSession,
     refreshEpoch: number,
   ): Promise<void> {
-    await tokenStore.setRefreshToken(session.refreshToken)
-    if (sessionEpoch !== refreshEpoch) {
-      await tokenStore.deleteRefreshToken()
-      throw new UnauthenticatedError()
-    }
+    await persistRefreshToken(session.refreshToken, refreshEpoch)
     accessToken = session.accessToken
   }
 
@@ -72,6 +94,7 @@ export function createSessionCoordinator({
     const flight = (async () => {
       try {
         const refreshToken = await tokenStore.getRefreshToken()
+        if (sessionEpoch !== refreshEpoch) throw new UnauthenticatedError()
         if (!refreshToken) throw new UnauthenticatedError()
         const next = await refresh(refreshToken)
         if (sessionEpoch !== refreshEpoch) throw new UnauthenticatedError()
@@ -79,7 +102,7 @@ export function createSessionCoordinator({
         return next
       } catch (error) {
         if (error instanceof ApiError || error instanceof ResponseContractError) {
-          await clearCredentials()
+          await clearCredentials(refreshEpoch)
         }
         throw error
       }
@@ -95,6 +118,7 @@ export function createSessionCoordinator({
   }
 
   async function restore(): Promise<PrivateUser | null> {
+    const restoreEpoch = sessionEpoch
     let refreshToken: string | null
     try {
       refreshToken = await tokenStore.getRefreshToken()
@@ -102,7 +126,7 @@ export function createSessionCoordinator({
       throw new SessionRestoreError(cause)
     }
     if (!refreshToken) {
-      accessToken = null
+      if (sessionEpoch === restoreEpoch) accessToken = null
       return null
     }
 
@@ -153,20 +177,21 @@ export function createSessionCoordinator({
       } as JsonRequestOptions<unknown>)
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        await clearCredentials()
+        await clearCredentials(sessionEpoch)
       }
       throw error
     }
   }
 
   async function logout(): Promise<void> {
-    sessionEpoch += 1
+    const logoutEpoch = beginAuthoritativeTransition()
+    accessToken = null
     let refreshToken: string | null = null
     try {
       refreshToken = await tokenStore.getRefreshToken()
       if (refreshToken) await revoke(refreshToken)
     } finally {
-      await clearCredentials()
+      await clearCredentials(logoutEpoch)
     }
   }
 

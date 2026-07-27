@@ -1,12 +1,13 @@
 import { trips } from '@movilis/db'
-import type { OwnedTrip } from '@movilis/shared'
+import { ownedTripSchema, type OwnedTrip } from '@movilis/shared'
+import { parse } from 'valibot'
 
 import { moneyFromDatabase } from '../../money.js'
 
 type TripRow = typeof trips.$inferSelect
 
 export function toOwnedTrip(trip: TripRow): OwnedTrip {
-  return {
+  return parse(ownedTripSchema, {
     id: trip.id,
     driverId: trip.driverId,
     originCityId: trip.originCityId,
@@ -22,5 +23,5 @@ export function toOwnedTrip(trip: TripRow): OwnedTrip {
     completedAt: trip.completedAt?.toISOString() ?? null,
     createdAt: trip.createdAt.toISOString(),
     updatedAt: trip.updatedAt.toISOString(),
-  }
+  })
 }

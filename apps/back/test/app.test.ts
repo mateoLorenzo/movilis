@@ -32,13 +32,19 @@ describe('buildApp', () => {
   })
 
   it('uses injected auth configuration in OTP endpoint behavior', async () => {
-    const db = {
+    const tx = {
+      execute: async () => undefined,
       select: () => ({
         from: () => ({
           where: async () => [{ requestCount: 0 }],
         }),
       }),
       insert: () => ({ values: async () => undefined }),
+    }
+    const db = {
+      ...tx,
+      transaction: async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
     } as unknown as Db
     const app = await buildApp({
       db,

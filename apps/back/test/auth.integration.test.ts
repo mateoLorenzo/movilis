@@ -1,3 +1,4 @@
+import { authSessions, otpChallenges } from '@movilis/db'
 import {
   apiErrorSchema,
   authSessionSchema,
@@ -5,6 +6,7 @@ import {
   requestOtpResponseSchema,
   verifyOtpResponseSchema,
 } from '@movilis/shared'
+import { eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { safeParse } from 'valibot'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -16,6 +18,7 @@ import {
   seedCity,
   seedUser,
 } from './fixtures.js'
+import { testDb } from './database.js'
 
 describe.sequential('authentication endpoint contracts', () => {
   let app: FastifyInstance
@@ -62,6 +65,21 @@ describe.sequential('authentication endpoint contracts', () => {
     expect(response.json()).toMatchObject({ code: 'RATE_LIMITED' })
   })
 
+  it('serializes concurrent OTP requests at the per-phone cap', async () => {
+    const responses = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        app.inject({
+          method: 'POST',
+          url: '/auth/otp/request',
+          payload: { phoneNumber: '+541140392404' },
+        }),
+      ),
+    )
+
+    expect(responses.filter(({ statusCode }) => statusCode === 200)).toHaveLength(3)
+    expect(responses.filter(({ statusCode }) => statusCode === 429)).toHaveLength(5)
+  })
+
   it('POST /auth/otp/verify returns signup_required', async () => {
     const { devCode } = await requestOtp(app)
     const response = await app.inject({ method: 'POST', url: '/auth/otp/verify', payload: { phoneNumber: '+541140392404', code: devCode } })
@@ -89,6 +107,67 @@ describe.sequential('authentication endpoint contracts', () => {
     expect(response.json()).toMatchObject({ code: 'INVALID_OTP' })
   })
 
+  it('does not lose concurrent wrong-attempt increments', async () => {
+    const { devCode } = await requestOtp(app)
+    const wrongCode = devCode === '000000' ? '111111' : '000000'
+
+    const responses = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        app.inject({
+          method: 'POST',
+          url: '/auth/otp/verify',
+          payload: { phoneNumber: '+541140392404', code: wrongCode },
+        }),
+      ),
+    )
+    expect(responses.every(({ statusCode }) => statusCode === 401)).toBe(true)
+
+    const valid = await app.inject({
+      method: 'POST',
+      url: '/auth/otp/verify',
+      payload: { phoneNumber: '+541140392404', code: devCode },
+    })
+    expect(valid.statusCode).toBe(401)
+    const [challenge] = await testDb
+      .select()
+      .from(otpChallenges)
+      .where(eq(otpChallenges.phoneNumber, '+541140392404'))
+    expect(challenge.attempts).toBe(3)
+    expect(challenge.consumedAt).not.toBeNull()
+  })
+
+  it('claims a valid OTP once when issuing an onboarding token', async () => {
+    const { devCode } = await requestOtp(app)
+    const responses = await Promise.all(
+      Array.from({ length: 2 }, () =>
+        app.inject({
+          method: 'POST',
+          url: '/auth/otp/verify',
+          payload: { phoneNumber: '+541140392404', code: devCode },
+        }),
+      ),
+    )
+    expect(responses.map(({ statusCode }) => statusCode).sort()).toEqual([200, 401])
+  })
+
+  it('claims a valid OTP once when issuing an authenticated session', async () => {
+    await seedCity()
+    await seedUser('city-1')
+    const { devCode } = await requestOtp(app)
+    const responses = await Promise.all(
+      Array.from({ length: 2 }, () =>
+        app.inject({
+          method: 'POST',
+          url: '/auth/otp/verify',
+          payload: { phoneNumber: '+541140392404', code: devCode },
+        }),
+      ),
+    )
+    expect(responses.map(({ statusCode }) => statusCode).sort()).toEqual([200, 401])
+    const sessions = await testDb.select().from(authSessions)
+    expect(sessions).toHaveLength(1)
+  })
+
   it('POST /auth/signup/complete returns AuthSession', async () => {
     await seedCity()
     const response = await completeSignup(app, 'city-1')
@@ -114,6 +193,29 @@ describe.sequential('authentication endpoint contracts', () => {
     const response = await app.inject({ method: 'POST', url: '/auth/signup/complete', payload: { onboardingToken, fullName: 'Ada', cityId: 'city-1' } })
     expect(response.statusCode).toBe(409)
     expect(response.json()).toMatchObject({ code: 'USER_ALREADY_EXISTS' })
+  })
+
+  it('maps a concurrent signup unique violation to USER_ALREADY_EXISTS', async () => {
+    await seedCity()
+    const onboardingToken = app.jwt.sign({
+      phoneNumber: '+541140392404',
+      tokenType: 'onboarding',
+    })
+    const responses = await Promise.all(
+      Array.from({ length: 2 }, () =>
+        app.inject({
+          method: 'POST',
+          url: '/auth/signup/complete',
+          payload: { onboardingToken, fullName: 'Ada', cityId: 'city-1' },
+        }),
+      ),
+    )
+
+    expect(responses.map(({ statusCode }) => statusCode).sort()).toEqual([200, 409])
+    expect(responses.find(({ statusCode }) => statusCode === 409)?.json()).toMatchObject({
+      code: 'USER_ALREADY_EXISTS',
+      message: 'User already exists',
+    })
   })
 
   it('POST /auth/refresh rotates a session and rejects reuse', async () => {
