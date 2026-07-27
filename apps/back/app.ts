@@ -23,10 +23,7 @@ export type BuildAppOptions = {
 }
 
 export async function buildApp(options: BuildAppOptions) {
-  const app = fastify({
-    logger: options.logger ?? true,
-    routerOptions: { ignoreTrailingSlash: true },
-  })
+  const app = fastify({ logger: options.logger ?? true })
   registerErrorHandling(app)
   app.decorate('db', options.db)
   app.decorate('authConfig', options.authConfig)

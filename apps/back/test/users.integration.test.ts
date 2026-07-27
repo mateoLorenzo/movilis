@@ -47,5 +47,17 @@ describe.sequential('GET /users/:id contract', () => {
     const response = await app.inject({ method: 'GET', url: '/users/' })
     expect(response.statusCode).toBe(404)
     expect(response.json()).toMatchObject({ code: 'NOT_FOUND' })
+    expect(safeParse(apiErrorSchema, response.json()).success).toBe(true)
+  })
+
+  it('returns NOT_FOUND when a user ID has a trailing slash', async () => {
+    await seedUser('city-1')
+    const response = await app.inject({
+      method: 'GET',
+      url: '/users/user-1/',
+    })
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toMatchObject({ code: 'NOT_FOUND' })
+    expect(safeParse(apiErrorSchema, response.json()).success).toBe(true)
   })
 })
