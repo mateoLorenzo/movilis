@@ -2,6 +2,7 @@
 
 # dependencies (hoisted to the monorepo root)
 node_modules/
+.worktrees/
 
 # build output
 dist/

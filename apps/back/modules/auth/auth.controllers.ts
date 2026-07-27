@@ -1,122 +1,106 @@
+import type {
+  AuthSession,
+  CompleteSignupRequest,
+  LogoutRequest,
+  RefreshRequest,
+  RequestOtpRequest,
+  VerifyOtpRequest,
+  VerifyOtpResponse,
+} from '@movilis/shared'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
-import { authConfig } from '../../auth.js'
+import { AppError } from '../../errors.js'
+import { toPrivateUser } from '../users/users.mapper.js'
 import { requireAccessUserId } from './auth.require.js'
-import { AuthError, authService } from './auth.service.js'
-
-type RequestOtpBody = { phoneNumber: string }
-type VerifyOtpBody = { phoneNumber: string; code: string }
-type CompleteSignupBody = {
-  onboardingToken: string
-  fullName: string
-  cityId: string
-  profilePhotoUrl?: string
-}
-type RefreshBody = { refreshToken: string }
+import { authService } from './auth.service.js'
 
 export async function requestOtp(
-  request: FastifyRequest<{ Body: RequestOtpBody }>,
+  request: FastifyRequest<{ Body: RequestOtpRequest }>,
   reply: FastifyReply,
 ) {
-  try {
-    const otp = await authService.requestOtp(
-      request.server.db,
-      request.body.phoneNumber,
-    )
-
-    return reply.send({
-      expiresInSeconds: authConfig.otpTtlSeconds,
-      ...(authConfig.exposeDevOtpCode ? { devCode: otp.code } : {}),
-    })
-  } catch (error) {
-    return sendAuthError(reply, error)
-  }
+  const otp = await authService.requestOtp(
+    request.server.db,
+    request.body.phoneNumber,
+    request.server.authConfig.otpTtlSeconds,
+  )
+  return reply.send({
+    expiresInSeconds: request.server.authConfig.otpTtlSeconds,
+    ...(request.server.authConfig.exposeDevOtpCode ? { devCode: otp.code } : {}),
+  })
 }
 
 export async function verifyOtp(
-  request: FastifyRequest<{ Body: VerifyOtpBody }>,
+  request: FastifyRequest<{ Body: VerifyOtpRequest }>,
   reply: FastifyReply,
 ) {
-  try {
-    const result = await authService.verifyOtp(
-      request.server.db,
-      request.body.phoneNumber,
-      request.body.code,
-    )
-
-    if (result.type === 'requiresSignup') {
-      return reply.send({
-        requiresSignup: true,
-        onboardingToken: request.server.jwt.sign(
-          { phoneNumber: result.phoneNumber, tokenType: 'onboarding' },
-          { expiresIn: authConfig.otpTtlSeconds },
-        ),
-      })
+  const result = await authService.verifyOtp(
+    request.server.db,
+    request.body.phoneNumber,
+    request.body.code,
+    request.server.authConfig.refreshTokenTtlSeconds,
+  )
+  if (result.type === 'requiresSignup') {
+    const body: VerifyOtpResponse = {
+      status: 'signup_required',
+      onboardingToken: request.server.jwt.sign(
+        { phoneNumber: result.phoneNumber, tokenType: 'onboarding' },
+        { expiresIn: request.server.authConfig.otpTtlSeconds },
+      ),
     }
-
-    return reply.send(
-      createTokenResponse(request, result.user, result.refreshToken),
-    )
-  } catch (error) {
-    return sendAuthError(reply, error)
+    return reply.send(body)
   }
+  return reply.send({
+    status: 'authenticated',
+    ...createAuthSession(request, result.user, result.refreshToken),
+  } satisfies VerifyOtpResponse)
 }
 
 export async function completeSignup(
-  request: FastifyRequest<{ Body: CompleteSignupBody }>,
+  request: FastifyRequest<{ Body: CompleteSignupRequest }>,
   reply: FastifyReply,
 ) {
   let payload: { phoneNumber?: string; tokenType?: string }
-
   try {
-    payload = request.server.jwt.verify(request.body.onboardingToken) as {
-      phoneNumber?: string
-      tokenType?: string
-    }
+    payload = request.server.jwt.verify(request.body.onboardingToken)
   } catch {
-    return reply.code(401).send({ message: 'Invalid onboarding token' })
+    throw new AppError(
+      'INVALID_ONBOARDING_TOKEN',
+      'Invalid onboarding token',
+    )
   }
-
   if (payload.tokenType !== 'onboarding' || !payload.phoneNumber) {
-    return reply.code(401).send({ message: 'Invalid onboarding token' })
+    throw new AppError(
+      'INVALID_ONBOARDING_TOKEN',
+      'Invalid onboarding token',
+    )
   }
-
-  try {
-    const result = await authService.completeSignup(request.server.db, {
+  const result = await authService.completeSignup(
+    request.server.db,
+    {
       phoneNumber: payload.phoneNumber,
       fullName: request.body.fullName,
       cityId: request.body.cityId,
       profilePhotoUrl: request.body.profilePhotoUrl,
-    })
-
-    return reply.send(
-      createTokenResponse(request, result.user, result.refreshToken),
-    )
-  } catch (error) {
-    return sendAuthError(reply, error)
-  }
+    },
+    request.server.authConfig.refreshTokenTtlSeconds,
+  )
+  return reply.send(createAuthSession(request, result.user, result.refreshToken))
 }
 
 export async function refresh(
-  request: FastifyRequest<{ Body: RefreshBody }>,
+  request: FastifyRequest<{ Body: RefreshRequest }>,
   reply: FastifyReply,
 ) {
-  try {
-    const result = await authService.refresh(
-      request.server.db,
-      request.body.refreshToken,
-    )
-
-    return reply.send(
-      createTokenResponse(request, result.user, result.refreshToken),
-    )
-  } catch (error) {
-    return sendAuthError(reply, error)
-  }
+  const result = await authService.refresh(
+    request.server.db,
+    request.body.refreshToken,
+    request.server.authConfig.refreshTokenTtlSeconds,
+  )
+  return reply.send(createAuthSession(request, result.user, result.refreshToken))
 }
 
 export async function logout(
-  request: FastifyRequest<{ Body: RefreshBody }>,
+  request: FastifyRequest<{ Body: LogoutRequest }>,
   reply: FastifyReply,
 ) {
   await authService.logout(request.server.db, request.body.refreshToken)
@@ -124,40 +108,25 @@ export async function logout(
 }
 
 export async function me(request: FastifyRequest, reply: FastifyReply) {
-  const userId = await requireAccessUserId(request, reply)
-
-  if (!userId) {
-    return
-  }
-
+  const userId = await requireAccessUserId(request)
   const user = await authService.getActiveUserById(request.server.db, userId)
-
   if (!user) {
-    return reply.code(401).send({ message: 'Invalid access token' })
+    throw new AppError('UNAUTHENTICATED', 'Authentication required')
   }
-
-  return reply.send(user)
+  return reply.send(toPrivateUser(user))
 }
 
-function createTokenResponse(
+function createAuthSession(
   request: FastifyRequest,
-  user: { id: string },
+  user: Parameters<typeof toPrivateUser>[0],
   refreshToken: string,
-) {
+): AuthSession {
   return {
     accessToken: request.server.jwt.sign(
       { sub: user.id, tokenType: 'access' },
-      { expiresIn: authConfig.accessTokenTtlSeconds },
+      { expiresIn: request.server.authConfig.accessTokenTtlSeconds },
     ),
     refreshToken,
-    user,
+    user: toPrivateUser(user),
   }
-}
-
-function sendAuthError(reply: FastifyReply, error: unknown) {
-  if (error instanceof AuthError) {
-    return reply.code(error.statusCode).send({ message: error.message })
-  }
-
-  throw error
 }

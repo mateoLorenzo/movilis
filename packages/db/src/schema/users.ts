@@ -1,6 +1,6 @@
 import { integer, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
 
-import { cities } from './cities'
+import { cities } from './cities.js'
 
 /** App users who can drive trips, reserve seats, receive alerts, and write reviews. */
 export const users = pgTable('users', {

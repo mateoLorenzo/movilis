@@ -6,10 +6,10 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core'
 
-import { cities } from './cities'
-import { devicePlatformEnum, localityDiscoveryRecurrenceEnum } from './enums'
-import { trips } from './trips'
-import { users } from './users'
+import { cities } from './cities.js'
+import { devicePlatformEnum, localityDiscoveryRecurrenceEnum } from './enums.js'
+import { trips } from './trips.js'
+import { users } from './users.js'
 
 /** Saved trip searches used to notify users when matching trips become available. */
 export const tripAlerts = pgTable('trip_alerts', {

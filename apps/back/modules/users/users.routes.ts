@@ -4,6 +4,7 @@ import { getUserById } from './users.controllers.js'
 import { getUserByIdSchema } from './users.schema.js'
 
 const usersRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/', (_request, reply) => reply.callNotFound())
   app.get('/:id', { schema: getUserByIdSchema }, getUserById)
 }
 

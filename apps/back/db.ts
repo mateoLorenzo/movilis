@@ -1,24 +1,15 @@
-import { createDb, type Db } from '@carpooling/db'
-import type { FastifyInstance } from 'fastify'
+import { createDb, type Db } from '@movilis/db'
 import { Pool } from 'pg'
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    db: Db
-  }
+export type DatabaseHandle = {
+  db: Db
+  close: () => Promise<void>
 }
 
-export async function registerDb(app: FastifyInstance) {
-  const connectionString = process.env.DATABASE_URL
-
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is required')
-  }
-
+export async function createDatabase(
+  connectionString: string,
+): Promise<DatabaseHandle> {
   const pool = new Pool({ connectionString })
-  const db = createDb(pool)
-
-  // Test the database connection before registering it with Fastify
   try {
     await pool.query('select 1')
   } catch (error) {
@@ -26,8 +17,8 @@ export async function registerDb(app: FastifyInstance) {
     throw error
   }
 
-  app.decorate('db', db)
-  app.addHook('onClose', async () => {
-    await pool.end()
-  })
+  return {
+    db: createDb(pool),
+    close: () => pool.end(),
+  }
 }

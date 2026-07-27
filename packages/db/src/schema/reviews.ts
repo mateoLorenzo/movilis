@@ -1,8 +1,8 @@
 import { integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
-import { reviewDirectionEnum } from './enums'
-import { trips } from './trips'
-import { users } from './users'
+import { reviewDirectionEnum } from './enums.js'
+import { trips } from './trips.js'
+import { users } from './users.js'
 
 /** Ratings and comments users leave for each other after a trip. */
 export const reviews = pgTable('reviews', {

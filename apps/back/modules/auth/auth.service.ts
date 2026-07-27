@@ -1,8 +1,8 @@
-import { authSessions, otpChallenges, users, type Db } from '@carpooling/db'
-import { and, count, eq, gte, isNull } from 'drizzle-orm'
+import { authSessions, otpChallenges, users, type Db } from '@movilis/db'
+import { and, count, desc, eq, gt, gte, isNull, sql } from 'drizzle-orm'
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
-import { authConfig } from '../../auth.js'
+import { AppError } from '../../errors.js'
 
 const maxOtpRequestsPerWindow = 3
 const otpRequestWindowMs = 15 * 60 * 1000
@@ -11,98 +11,114 @@ const maxOtpAttempts = 3
 // Transactions support DB query methods but do not expose the root pool client.
 type DbClient = Omit<Db, '$client'>
 
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    readonly statusCode = 400,
-  ) {
-    super(message)
-  }
+type CompleteSignupInput = {
+  phoneNumber: string
+  fullName: string
+  cityId: string
+  profilePhotoUrl?: string
 }
 
 export const authService = {
-  async requestOtp(db: Db, phoneNumber: string) {
+  async requestOtp(db: Db, phoneNumber: string, otpTtlSeconds: number) {
     const now = new Date()
     const requestWindowStart = new Date(now.getTime() - otpRequestWindowMs)
-    const [{ requestCount }] = await db
-      .select({ requestCount: count() })
-      .from(otpChallenges)
-      .where(
-        and(
-          eq(otpChallenges.phoneNumber, phoneNumber),
-          gte(otpChallenges.createdAt, requestWindowStart),
-        ),
-      )
-
-    if (requestCount >= maxOtpRequestsPerWindow) {
-      throw new AuthError('Too many OTP requests. Try again later.', 429)
-    }
-
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
-    const expiresAt = new Date(now.getTime() + authConfig.otpTtlSeconds * 1000)
+    const expiresAt = new Date(now.getTime() + otpTtlSeconds * 1000)
 
-    await db.insert(otpChallenges).values({
-      id: randomUUID(),
-      phoneNumber,
-      codeHash: hashOtp(phoneNumber, code),
-      expiresAt,
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${phoneNumber}, 0))`,
+      )
+      const [{ requestCount }] = await tx
+        .select({ requestCount: count() })
+        .from(otpChallenges)
+        .where(
+          and(
+            eq(otpChallenges.phoneNumber, phoneNumber),
+            gte(otpChallenges.createdAt, requestWindowStart),
+          ),
+        )
+
+      if (requestCount >= maxOtpRequestsPerWindow) {
+        throw new AppError(
+          'RATE_LIMITED',
+          'Too many OTP requests. Try again later.',
+        )
+      }
+
+      await tx.insert(otpChallenges).values({
+        id: randomUUID(),
+        phoneNumber,
+        codeHash: hashOtp(phoneNumber, code),
+        expiresAt,
+      })
     })
 
     return { code, expiresAt }
   },
 
-  async verifyOtp(db: Db, phoneNumber: string, code: string) {
+  async verifyOtp(
+    db: Db,
+    phoneNumber: string,
+    code: string,
+    refreshTokenTtlSeconds: number,
+  ) {
     const now = new Date()
-    const challenge = await db.query.otpChallenges.findFirst({
-      where: (otpChallenges, { and, eq, gt, isNull }) =>
-        and(
-          eq(otpChallenges.phoneNumber, phoneNumber),
-          isNull(otpChallenges.consumedAt),
-          gt(otpChallenges.expiresAt, now),
-        ),
-      orderBy: (otpChallenges, { desc }) => [desc(otpChallenges.createdAt)],
-    })
+    const result = await db.transaction(async (tx) => {
+      const [challenge] = await tx
+        .select()
+        .from(otpChallenges)
+        .where(
+          and(
+            eq(otpChallenges.phoneNumber, phoneNumber),
+            isNull(otpChallenges.consumedAt),
+            gt(otpChallenges.expiresAt, now),
+          ),
+        )
+        .orderBy(desc(otpChallenges.createdAt))
+        .limit(1)
+        .for('update')
 
-    if (!challenge) {
-      throw new AuthError('Invalid or expired OTP code', 401)
-    }
+      if (!challenge) return { type: 'invalid' as const }
 
-    if (challenge.codeHash !== hashOtp(phoneNumber, code)) {
-      const attempts = challenge.attempts + 1
-      await db
+      if (challenge.codeHash !== hashOtp(phoneNumber, code)) {
+        const attempts = challenge.attempts + 1
+        await tx
+          .update(otpChallenges)
+          .set({
+            attempts,
+            consumedAt: attempts >= maxOtpAttempts ? now : null,
+          })
+          .where(eq(otpChallenges.id, challenge.id))
+        return { type: 'invalid' as const }
+      }
+
+      await tx
         .update(otpChallenges)
-        .set({
-          attempts,
-          consumedAt: attempts >= maxOtpAttempts ? now : null,
-        })
+        .set({ consumedAt: now })
         .where(eq(otpChallenges.id, challenge.id))
 
-      throw new AuthError('Invalid or expired OTP code', 401)
+      const user = await findActiveUserByPhoneNumber(tx, phoneNumber)
+      if (!user) return { type: 'requiresSignup' as const, phoneNumber }
+
+      const refreshToken = await createRefreshSession(
+        tx,
+        user.id,
+        refreshTokenTtlSeconds,
+      )
+      return { type: 'authenticated' as const, user, refreshToken }
+    })
+
+    if (result.type === 'invalid') {
+      throw new AppError('INVALID_OTP', 'Invalid or expired OTP code')
     }
-
-    await db
-      .update(otpChallenges)
-      .set({ consumedAt: now })
-      .where(eq(otpChallenges.id, challenge.id))
-
-    const user = await findActiveUserByPhoneNumber(db, phoneNumber)
-
-    if (!user) {
-      return { type: 'requiresSignup' as const, phoneNumber }
-    }
-
-    const refreshToken = await createRefreshSession(db, user.id)
-    return { type: 'authenticated' as const, user, refreshToken }
+    return result
   },
 
   async completeSignup(
     db: Db,
-    input: {
-      phoneNumber: string
-      fullName: string
-      cityId: string
-      profilePhotoUrl?: string
-    },
+    input: CompleteSignupInput,
+    refreshTokenTtlSeconds: number,
   ) {
     const existingUser = await findActiveUserByPhoneNumber(
       db,
@@ -110,7 +126,7 @@ export const authService = {
     )
 
     if (existingUser) {
-      throw new AuthError('User already exists', 409)
+      throw new AppError('USER_ALREADY_EXISTS', 'User already exists')
     }
 
     const city = await db.query.cities.findFirst({
@@ -118,56 +134,78 @@ export const authService = {
     })
 
     if (!city) {
-      throw new AuthError('City not found', 400)
+      throw new AppError('CITY_NOT_FOUND', 'City not found')
     }
 
-    const [user] = await db
-      .insert(users)
-      .values({
-        id: randomUUID(),
-        phoneNumber: input.phoneNumber,
-        fullName: input.fullName,
-        cityId: input.cityId,
-        profilePhotoUrl: input.profilePhotoUrl,
+    let result: {
+      user: typeof users.$inferSelect
+      refreshToken: string
+    }
+    try {
+      result = await db.transaction(async (tx) => {
+        const [user] = await tx
+          .insert(users)
+          .values({
+            id: randomUUID(),
+            phoneNumber: input.phoneNumber,
+            fullName: input.fullName,
+            cityId: input.cityId,
+            profilePhotoUrl: input.profilePhotoUrl,
+          })
+          .returning()
+        const refreshToken = await createRefreshSession(
+          tx,
+          user.id,
+          refreshTokenTtlSeconds,
+        )
+        return { user, refreshToken }
       })
-      .returning()
+    } catch (error) {
+      if (isUserPhoneUniqueViolation(error)) {
+        throw new AppError('USER_ALREADY_EXISTS', 'User already exists')
+      }
+      throw error
+    }
 
-    const refreshToken = await createRefreshSession(db, user.id)
-    return { user, refreshToken }
+    return result
   },
 
-  async refresh(db: Db, refreshToken: string) {
+  async refresh(
+    db: Db,
+    refreshToken: string,
+    refreshTokenTtlSeconds: number,
+  ) {
     const now = new Date()
     const tokenHash = hashToken(refreshToken)
 
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const session = await tx.query.authSessions.findFirst({
         where: (authSessions, { eq }) =>
           eq(authSessions.refreshTokenHash, tokenHash),
       })
 
       if (!session) {
-        throw new AuthError('Invalid refresh token', 401)
+        return null
       }
 
       if (session.revokedAt) {
         await revokeAllUserSessions(tx, session.userId)
-        throw new AuthError('Invalid refresh token', 401)
+        return null
       }
 
       if (session.expiresAt <= now) {
         await revokeSession(tx, session.id)
-        throw new AuthError('Invalid refresh token', 401)
+        return null
       }
 
       const user = await findActiveUserById(tx, session.userId)
 
       if (!user) {
         await revokeAllUserSessions(tx, session.userId)
-        throw new AuthError('Invalid refresh token', 401)
+        return null
       }
 
-      const nextSession = createSessionValues(user.id)
+      const nextSession = createSessionValues(user.id, refreshTokenTtlSeconds)
       const [revokedSession] = await tx
         .update(authSessions)
         .set({ revokedAt: now, replacedBySessionId: nextSession.session.id })
@@ -177,13 +215,23 @@ export const authService = {
         .returning({ id: authSessions.id })
 
       if (!revokedSession) {
-        throw new AuthError('Invalid refresh token', 401)
+        await revokeAllUserSessions(tx, session.userId)
+        return null
       }
 
       await tx.insert(authSessions).values(nextSession.session)
 
       return { user, refreshToken: nextSession.refreshToken }
     })
+
+    if (!result) {
+      throw new AppError(
+        'INVALID_REFRESH_TOKEN',
+        'Invalid refresh token',
+      )
+    }
+
+    return result
   },
 
   async logout(db: DbClient, refreshToken: string) {
@@ -202,13 +250,17 @@ export const authService = {
   },
 }
 
-async function createRefreshSession(db: Db, userId: string) {
-  const values = createSessionValues(userId)
+async function createRefreshSession(
+  db: DbClient,
+  userId: string,
+  refreshTokenTtlSeconds: number,
+) {
+  const values = createSessionValues(userId, refreshTokenTtlSeconds)
   await db.insert(authSessions).values(values.session)
   return values.refreshToken
 }
 
-function createSessionValues(userId: string) {
+function createSessionValues(userId: string, refreshTokenTtlSeconds: number) {
   const refreshToken = randomBytes(32).toString('base64url')
 
   return {
@@ -217,9 +269,7 @@ function createSessionValues(userId: string) {
       id: randomUUID(),
       userId,
       refreshTokenHash: hashToken(refreshToken),
-      expiresAt: new Date(
-        Date.now() + authConfig.refreshTokenTtlSeconds * 1000,
-      ),
+      expiresAt: new Date(Date.now() + refreshTokenTtlSeconds * 1000),
     },
   }
 }
@@ -258,4 +308,22 @@ function hashOtp(phoneNumber: string, code: string) {
 
 function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
+}
+
+function isUserPhoneUniqueViolation(error: unknown): boolean {
+  let current = error
+  const seen = new Set<unknown>()
+  while (typeof current === 'object' && current !== null && !seen.has(current)) {
+    seen.add(current)
+    if (
+      'code' in current &&
+      current.code === '23505' &&
+      'constraint' in current &&
+      current.constraint === 'users_phone_number_unique'
+    ) {
+      return true
+    }
+    current = 'cause' in current ? current.cause : undefined
+  }
+  return false
 }

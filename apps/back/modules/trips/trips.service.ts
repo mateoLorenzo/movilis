@@ -1,6 +1,8 @@
-import { trips, type Db } from '@carpooling/db'
+import { trips, type Db } from '@movilis/db'
 import { desc, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
+
+import { AppError } from '../../errors.js'
 
 type CreateTripInput = {
   driverId: string
@@ -11,15 +13,6 @@ type CreateTripInput = {
   pricePerSeat: number
   contactPhoneNumber: string
   notes?: string
-}
-
-export class TripsError extends Error {
-  constructor(
-    message: string,
-    readonly statusCode = 400,
-  ) {
-    super(message)
-  }
 }
 
 export const tripsService = {
@@ -33,12 +26,8 @@ export const tripsService = {
       }),
     ])
 
-    if (!originCity) {
-      throw new TripsError('Origin city not found')
-    }
-
-    if (!destinationCity) {
-      throw new TripsError('Destination city not found')
+    if (!originCity || !destinationCity) {
+      throw new AppError('CITY_NOT_FOUND', 'City not found')
     }
 
     const [trip] = await db
