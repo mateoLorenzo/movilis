@@ -8,6 +8,23 @@ if (!connectionString) {
   throw new Error('TEST_DATABASE_URL is required for backend integration tests')
 }
 
+const unsafeDatabaseError =
+  'TEST_DATABASE_URL must be a PostgreSQL URL for a database ending in "_test"'
+let databaseName: string
+try {
+  const url = new URL(connectionString)
+  if (url.protocol !== 'postgres:' && url.protocol !== 'postgresql:') {
+    throw new Error(unsafeDatabaseError)
+  }
+  databaseName = decodeURIComponent(url.pathname.slice(1))
+} catch {
+  throw new Error(unsafeDatabaseError)
+}
+
+if (!databaseName || !databaseName.endsWith('_test')) {
+  throw new Error(unsafeDatabaseError)
+}
+
 export const testPool = new Pool({ connectionString })
 export const testDb = createDb(testPool)
 

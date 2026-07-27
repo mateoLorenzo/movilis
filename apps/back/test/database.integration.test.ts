@@ -17,6 +17,18 @@ describe.sequential('PostgreSQL integration harness', () => {
     expect(value).toBe(0)
   })
 
+  it('allows a test to leave application rows behind', async () => {
+    await seedCity()
+
+    const [{ value }] = await testDb.select({ value: count() }).from(cities)
+    expect(value).toBe(1)
+  })
+
+  it('resets application rows before the next test', async () => {
+    const [{ value }] = await testDb.select({ value: count() }).from(cities)
+    expect(value).toBe(0)
+  })
+
   it('seeds deterministic cities and users', async () => {
     const city = await seedCity()
     const user = await seedUser(city.id)
