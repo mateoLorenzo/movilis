@@ -17,7 +17,7 @@ export async function createTrip(
   request: FastifyRequest<{ Body: CreateTripBody }>,
   reply: FastifyReply,
 ) {
-  const driverId = await requireAccessUserId(request, reply)
+  const driverId = await requireAccessUserId(request)
 
   if (!driverId) {
     return
@@ -53,7 +53,7 @@ export async function listMyTrips(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
-  const driverId = await requireAccessUserId(request, reply)
+  const driverId = await requireAccessUserId(request)
 
   if (!driverId) {
     return

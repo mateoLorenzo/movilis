@@ -1,10 +1,9 @@
 import {
+  authSessionSchema,
   completeSignupRequestSchema,
-  completeSignupResponseSchema,
-  getMeResponseSchema,
   logoutRequestSchema,
+  privateUserSchema,
   refreshRequestSchema,
-  refreshResponseSchema,
   requestOtpRequestSchema,
   requestOtpResponseSchema,
   verifyOtpRequestSchema,
@@ -15,47 +14,29 @@ import { errorResponses, toFastifySchema } from '../../schemas.js'
 
 export const requestOtpSchema = {
   body: toFastifySchema(requestOtpRequestSchema),
-  response: {
-    ...errorResponses,
-    200: toFastifySchema(requestOtpResponseSchema),
-  },
+  response: { 200: toFastifySchema(requestOtpResponseSchema), ...errorResponses },
 }
 
 export const verifyOtpSchema = {
   body: toFastifySchema(verifyOtpRequestSchema),
-  response: {
-    ...errorResponses,
-    200: toFastifySchema(verifyOtpResponseSchema),
-  },
+  response: { 200: toFastifySchema(verifyOtpResponseSchema), ...errorResponses },
 }
 
 export const completeSignupSchema = {
   body: toFastifySchema(completeSignupRequestSchema),
-  response: {
-    ...errorResponses,
-    200: toFastifySchema(completeSignupResponseSchema),
-  },
+  response: { 200: toFastifySchema(authSessionSchema), ...errorResponses },
 }
 
 export const refreshSchema = {
   body: toFastifySchema(refreshRequestSchema),
-  response: {
-    ...errorResponses,
-    200: toFastifySchema(refreshResponseSchema),
-  },
+  response: { 200: toFastifySchema(authSessionSchema), ...errorResponses },
 }
 
 export const logoutSchema = {
   body: toFastifySchema(logoutRequestSchema),
-  response: {
-    ...errorResponses,
-    204: { type: 'null' },
-  },
+  response: { 204: { type: 'null' }, ...errorResponses },
 }
 
 export const meSchema = {
-  response: {
-    ...errorResponses,
-    200: toFastifySchema(getMeResponseSchema),
-  },
+  response: { 200: toFastifySchema(privateUserSchema), ...errorResponses },
 }

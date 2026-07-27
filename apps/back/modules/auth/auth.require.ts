@@ -1,19 +1,16 @@
-import type { FastifyReply, FastifyRequest } from 'fastify'
+import type { FastifyRequest } from 'fastify'
 
-export async function requireAccessUserId(
-  request: FastifyRequest,
-  reply: FastifyReply,
-) {
+import { AppError } from '../../errors.js'
+
+export async function requireAccessUserId(request: FastifyRequest) {
   try {
     await request.jwtVerify()
   } catch {
-    reply.code(401).send({ message: 'Invalid access token' })
-    return null
+    throw new AppError('UNAUTHENTICATED', 401, 'Authentication required')
   }
 
   if (request.user.tokenType !== 'access' || !request.user.sub) {
-    reply.code(401).send({ message: 'Invalid access token' })
-    return null
+    throw new AppError('UNAUTHENTICATED', 401, 'Authentication required')
   }
 
   return request.user.sub

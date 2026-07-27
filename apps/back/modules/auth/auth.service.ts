@@ -2,6 +2,8 @@ import { authSessions, otpChallenges, users, type Db } from '@movilis/db'
 import { and, count, eq, gte, isNull } from 'drizzle-orm'
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
+import { AppError } from '../../errors.js'
+
 const maxOtpRequestsPerWindow = 3
 const otpRequestWindowMs = 15 * 60 * 1000
 const maxOtpAttempts = 3
@@ -9,13 +11,11 @@ const maxOtpAttempts = 3
 // Transactions support DB query methods but do not expose the root pool client.
 type DbClient = Omit<Db, '$client'>
 
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    readonly statusCode = 400,
-  ) {
-    super(message)
-  }
+type CompleteSignupInput = {
+  phoneNumber: string
+  fullName: string
+  cityId: string
+  profilePhotoUrl?: string
 }
 
 export const authService = {
@@ -33,7 +33,11 @@ export const authService = {
       )
 
     if (requestCount >= maxOtpRequestsPerWindow) {
-      throw new AuthError('Too many OTP requests. Try again later.', 429)
+      throw new AppError(
+        'RATE_LIMITED',
+        429,
+        'Too many OTP requests. Try again later.',
+      )
     }
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
@@ -67,7 +71,7 @@ export const authService = {
     })
 
     if (!challenge) {
-      throw new AuthError('Invalid or expired OTP code', 401)
+      throw new AppError('INVALID_OTP', 401, 'Invalid or expired OTP code')
     }
 
     if (challenge.codeHash !== hashOtp(phoneNumber, code)) {
@@ -80,7 +84,7 @@ export const authService = {
         })
         .where(eq(otpChallenges.id, challenge.id))
 
-      throw new AuthError('Invalid or expired OTP code', 401)
+      throw new AppError('INVALID_OTP', 401, 'Invalid or expired OTP code')
     }
 
     await db
@@ -104,12 +108,7 @@ export const authService = {
 
   async completeSignup(
     db: Db,
-    input: {
-      phoneNumber: string
-      fullName: string
-      cityId: string
-      profilePhotoUrl?: string
-    },
+    input: CompleteSignupInput,
     refreshTokenTtlSeconds: number,
   ) {
     const existingUser = await findActiveUserByPhoneNumber(
@@ -118,7 +117,7 @@ export const authService = {
     )
 
     if (existingUser) {
-      throw new AuthError('User already exists', 409)
+      throw new AppError('USER_ALREADY_EXISTS', 409, 'User already exists')
     }
 
     const city = await db.query.cities.findFirst({
@@ -126,7 +125,7 @@ export const authService = {
     })
 
     if (!city) {
-      throw new AuthError('City not found', 400)
+      throw new AppError('CITY_NOT_FOUND', 404, 'City not found')
     }
 
     const [user] = await db
@@ -163,24 +162,40 @@ export const authService = {
       })
 
       if (!session) {
-        throw new AuthError('Invalid refresh token', 401)
+        throw new AppError(
+          'INVALID_REFRESH_TOKEN',
+          401,
+          'Invalid refresh token',
+        )
       }
 
       if (session.revokedAt) {
         await revokeAllUserSessions(tx, session.userId)
-        throw new AuthError('Invalid refresh token', 401)
+        throw new AppError(
+          'INVALID_REFRESH_TOKEN',
+          401,
+          'Invalid refresh token',
+        )
       }
 
       if (session.expiresAt <= now) {
         await revokeSession(tx, session.id)
-        throw new AuthError('Invalid refresh token', 401)
+        throw new AppError(
+          'INVALID_REFRESH_TOKEN',
+          401,
+          'Invalid refresh token',
+        )
       }
 
       const user = await findActiveUserById(tx, session.userId)
 
       if (!user) {
         await revokeAllUserSessions(tx, session.userId)
-        throw new AuthError('Invalid refresh token', 401)
+        throw new AppError(
+          'INVALID_REFRESH_TOKEN',
+          401,
+          'Invalid refresh token',
+        )
       }
 
       const nextSession = createSessionValues(user.id, refreshTokenTtlSeconds)
@@ -193,7 +208,11 @@ export const authService = {
         .returning({ id: authSessions.id })
 
       if (!revokedSession) {
-        throw new AuthError('Invalid refresh token', 401)
+        throw new AppError(
+          'INVALID_REFRESH_TOKEN',
+          401,
+          'Invalid refresh token',
+        )
       }
 
       await tx.insert(authSessions).values(nextSession.session)
