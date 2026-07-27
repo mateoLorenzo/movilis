@@ -1,52 +1,36 @@
+import type { CreateTripRequest } from '@movilis/shared'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
+import { AppError } from '../../errors.js'
+import { moneyToDatabase } from '../../money.js'
 import { requireAccessUserId } from '../auth/auth.require.js'
-import { TripsError, tripsService } from './trips.service.js'
-
-type CreateTripBody = {
-  originCityId: string
-  destinationCityId: string
-  departureAt: string
-  totalSeats: number
-  pricePerSeat: number
-  contactPhoneNumber: string
-  notes?: string
-}
+import { toOwnedTrip } from './trips.mapper.js'
+import { tripsService } from './trips.service.js'
 
 export async function createTrip(
-  request: FastifyRequest<{ Body: CreateTripBody }>,
+  request: FastifyRequest<{ Body: CreateTripRequest }>,
   reply: FastifyReply,
 ) {
   const driverId = await requireAccessUserId(request)
-
-  if (!driverId) {
-    return
-  }
-
   const departureAt = new Date(request.body.departureAt)
-
   if (Number.isNaN(departureAt.getTime()) || departureAt <= new Date()) {
-    return reply
-      .code(400)
-      .send({ message: 'Departure date must be in the future' })
+    throw new AppError(
+      'INVALID_DEPARTURE_TIME',
+      400,
+      'Departure date must be in the future',
+    )
   }
-
-  try {
-    const trip = await tripsService.create(request.server.db, {
-      driverId,
-      originCityId: request.body.originCityId,
-      destinationCityId: request.body.destinationCityId,
-      departureAt,
-      totalSeats: request.body.totalSeats,
-      pricePerSeat: request.body.pricePerSeat,
-      contactPhoneNumber: request.body.contactPhoneNumber,
-      notes: request.body.notes,
-    })
-
-    return reply.code(201).send(trip)
-  } catch (error) {
-    return sendTripsError(reply, error)
-  }
+  const trip = await tripsService.create(request.server.db, {
+    driverId,
+    originCityId: request.body.originCityId,
+    destinationCityId: request.body.destinationCityId,
+    departureAt,
+    totalSeats: request.body.totalSeats,
+    pricePerSeat: moneyToDatabase(request.body.pricePerSeat),
+    contactPhoneNumber: request.body.contactPhoneNumber,
+    notes: request.body.notes,
+  })
+  return reply.code(201).send(toOwnedTrip(trip))
 }
 
 export async function listMyTrips(
@@ -54,20 +38,6 @@ export async function listMyTrips(
   reply: FastifyReply,
 ) {
   const driverId = await requireAccessUserId(request)
-
-  if (!driverId) {
-    return
-  }
-
   const trips = await tripsService.listMine(request.server.db, driverId)
-
-  return reply.send(trips)
-}
-
-function sendTripsError(reply: FastifyReply, error: unknown) {
-  if (error instanceof TripsError) {
-    return reply.code(error.statusCode).send({ message: error.message })
-  }
-
-  throw error
+  return reply.send({ items: trips.map(toOwnedTrip), nextCursor: null })
 }
