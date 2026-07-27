@@ -27,7 +27,7 @@ export const tripsService = {
     ])
 
     if (!originCity || !destinationCity) {
-      throw new AppError('CITY_NOT_FOUND', 404, 'City not found')
+      throw new AppError('CITY_NOT_FOUND', 'City not found')
     }
 
     const [trip] = await db

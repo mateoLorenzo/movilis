@@ -35,7 +35,6 @@ export const authService = {
     if (requestCount >= maxOtpRequestsPerWindow) {
       throw new AppError(
         'RATE_LIMITED',
-        429,
         'Too many OTP requests. Try again later.',
       )
     }
@@ -71,7 +70,7 @@ export const authService = {
     })
 
     if (!challenge) {
-      throw new AppError('INVALID_OTP', 401, 'Invalid or expired OTP code')
+      throw new AppError('INVALID_OTP', 'Invalid or expired OTP code')
     }
 
     if (challenge.codeHash !== hashOtp(phoneNumber, code)) {
@@ -84,7 +83,7 @@ export const authService = {
         })
         .where(eq(otpChallenges.id, challenge.id))
 
-      throw new AppError('INVALID_OTP', 401, 'Invalid or expired OTP code')
+      throw new AppError('INVALID_OTP', 'Invalid or expired OTP code')
     }
 
     await db
@@ -117,7 +116,7 @@ export const authService = {
     )
 
     if (existingUser) {
-      throw new AppError('USER_ALREADY_EXISTS', 409, 'User already exists')
+      throw new AppError('USER_ALREADY_EXISTS', 'User already exists')
     }
 
     const city = await db.query.cities.findFirst({
@@ -125,7 +124,7 @@ export const authService = {
     })
 
     if (!city) {
-      throw new AppError('CITY_NOT_FOUND', 404, 'City not found')
+      throw new AppError('CITY_NOT_FOUND', 'City not found')
     }
 
     const [user] = await db
@@ -204,7 +203,6 @@ export const authService = {
     if (!result) {
       throw new AppError(
         'INVALID_REFRESH_TOKEN',
-        401,
         'Invalid refresh token',
       )
     }

@@ -6,11 +6,11 @@ export async function requireAccessUserId(request: FastifyRequest) {
   try {
     await request.jwtVerify()
   } catch {
-    throw new AppError('UNAUTHENTICATED', 401, 'Authentication required')
+    throw new AppError('UNAUTHENTICATED', 'Authentication required')
   }
 
   if (request.user.tokenType !== 'access' || !request.user.sub) {
-    throw new AppError('UNAUTHENTICATED', 401, 'Authentication required')
+    throw new AppError('UNAUTHENTICATED', 'Authentication required')
   }
 
   return request.user.sub

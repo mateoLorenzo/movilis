@@ -16,7 +16,6 @@ export async function createTrip(
   if (Number.isNaN(departureAt.getTime()) || departureAt <= new Date()) {
     throw new AppError(
       'INVALID_DEPARTURE_TIME',
-      400,
       'Departure date must be in the future',
     )
   }

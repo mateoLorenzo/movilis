@@ -11,7 +11,7 @@ export async function getUserById(
 ) {
   const user = await usersService.getById(request.server.db, request.params.id)
   if (!user) {
-    throw new AppError('USER_NOT_FOUND', 404, 'User not found')
+    throw new AppError('USER_NOT_FOUND', 'User not found')
   }
   return reply.send(toPublicUser(user))
 }

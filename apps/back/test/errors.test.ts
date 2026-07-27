@@ -32,7 +32,7 @@ describe('canonical error handling', () => {
   it('serializes a domain error', async () => {
     const app = await createTestApp()
     app.get('/domain-error', async () => {
-      throw new AppError('CITY_NOT_FOUND', 404, 'City not found')
+      throw new AppError('CITY_NOT_FOUND', 'City not found')
     })
 
     const response = await app.inject({ method: 'GET', url: '/domain-error' })

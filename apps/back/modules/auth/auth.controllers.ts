@@ -65,14 +65,12 @@ export async function completeSignup(
   } catch {
     throw new AppError(
       'INVALID_ONBOARDING_TOKEN',
-      401,
       'Invalid onboarding token',
     )
   }
   if (payload.tokenType !== 'onboarding' || !payload.phoneNumber) {
     throw new AppError(
       'INVALID_ONBOARDING_TOKEN',
-      401,
       'Invalid onboarding token',
     )
   }
@@ -113,7 +111,7 @@ export async function me(request: FastifyRequest, reply: FastifyReply) {
   const userId = await requireAccessUserId(request)
   const user = await authService.getActiveUserById(request.server.db, userId)
   if (!user) {
-    throw new AppError('UNAUTHENTICATED', 401, 'Authentication required')
+    throw new AppError('UNAUTHENTICATED', 'Authentication required')
   }
   return reply.send(toPrivateUser(user))
 }
