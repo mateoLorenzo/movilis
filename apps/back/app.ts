@@ -3,6 +3,7 @@ import fastify, { type FastifyServerOptions } from 'fastify'
 
 import { registerAuth } from './auth.js'
 import type { AuthConfig } from './config.js'
+import { registerErrorHandling } from './errors.js'
 import authRoutes from './modules/auth/auth.routes.js'
 import tripsRoutes from './modules/trips/trips.routes.js'
 import usersRoutes from './modules/users/users.routes.js'
@@ -23,6 +24,7 @@ export type BuildAppOptions = {
 
 export async function buildApp(options: BuildAppOptions) {
   const app = fastify({ logger: options.logger ?? true })
+  registerErrorHandling(app)
   app.decorate('db', options.db)
   app.decorate('authConfig', options.authConfig)
 

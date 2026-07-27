@@ -31,9 +31,6 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
-      drizzle-valibot:
-        specifier: ^0.4.2
-        version: 0.4.2(drizzle-orm@0.45.2(@types/pg@8.20.0)(pg@8.22.0))(valibot@1.4.2(typescript@6.0.3))
       fastify:
         specifier: ^5.8.5
         version: 5.10.0
@@ -2828,12 +2825,6 @@ packages:
         optional: true
       sqlite3:
         optional: true
-
-  drizzle-valibot@0.4.2:
-    resolution: {integrity: sha512-tzjT7g0Di/HX7426marIy8IDtWODjPgrwvgscdevLQRUe5rzYzRhx6bDsYLdDFF9VI/eaYgnjNeF/fznWJoUjg==}
-    peerDependencies:
-      drizzle-orm: '>=0.36.0'
-      valibot: '>=1.0.0-beta.7'
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -7033,9 +7024,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -8108,11 +8097,6 @@ snapshots:
     optionalDependencies:
       '@types/pg': 8.20.0
       pg: 8.22.0
-
-  drizzle-valibot@0.4.2(drizzle-orm@0.45.2(@types/pg@8.20.0)(pg@8.22.0))(valibot@1.4.2(typescript@6.0.3)):
-    dependencies:
-      drizzle-orm: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
-      valibot: 1.4.2(typescript@6.0.3)
 
   dunder-proto@1.0.1:
     dependencies:
