@@ -125,14 +125,20 @@ export function createSessionCoordinator({
     } catch (cause) {
       throw new SessionRestoreError(cause)
     }
+    if (sessionEpoch !== restoreEpoch) {
+      throw new SessionRestoreError(new UnauthenticatedError())
+    }
     if (!refreshToken) {
-      if (sessionEpoch === restoreEpoch) accessToken = null
+      accessToken = null
       return null
     }
 
     try {
       return (await refreshOnce()).user
     } catch (error) {
+      if (sessionEpoch !== restoreEpoch) {
+        throw new SessionRestoreError(new UnauthenticatedError())
+      }
       if (error instanceof NetworkError || error instanceof RequestTimeoutError) {
         throw new SessionRestoreError(error)
       }
@@ -170,6 +176,7 @@ export function createSessionCoordinator({
     }
 
     const retryToken = await recoverFrom401(firstToken)
+    const retryEpoch = sessionEpoch
     try {
       return await transport.request({
         ...options,
@@ -177,7 +184,7 @@ export function createSessionCoordinator({
       } as JsonRequestOptions<unknown>)
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        await clearCredentials(sessionEpoch)
+        await clearCredentials(retryEpoch)
       }
       throw error
     }

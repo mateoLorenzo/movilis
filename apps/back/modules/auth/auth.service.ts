@@ -137,31 +137,37 @@ export const authService = {
       throw new AppError('CITY_NOT_FOUND', 'City not found')
     }
 
-    let user: typeof users.$inferSelect
+    let result: {
+      user: typeof users.$inferSelect
+      refreshToken: string
+    }
     try {
-      ;[user] = await db
-        .insert(users)
-        .values({
-          id: randomUUID(),
-          phoneNumber: input.phoneNumber,
-          fullName: input.fullName,
-          cityId: input.cityId,
-          profilePhotoUrl: input.profilePhotoUrl,
-        })
-        .returning()
+      result = await db.transaction(async (tx) => {
+        const [user] = await tx
+          .insert(users)
+          .values({
+            id: randomUUID(),
+            phoneNumber: input.phoneNumber,
+            fullName: input.fullName,
+            cityId: input.cityId,
+            profilePhotoUrl: input.profilePhotoUrl,
+          })
+          .returning()
+        const refreshToken = await createRefreshSession(
+          tx,
+          user.id,
+          refreshTokenTtlSeconds,
+        )
+        return { user, refreshToken }
+      })
     } catch (error) {
-      if (isPostgresUniqueViolation(error)) {
+      if (isUserPhoneUniqueViolation(error)) {
         throw new AppError('USER_ALREADY_EXISTS', 'User already exists')
       }
       throw error
     }
 
-    const refreshToken = await createRefreshSession(
-      db,
-      user.id,
-      refreshTokenTtlSeconds,
-    )
-    return { user, refreshToken }
+    return result
   },
 
   async refresh(
@@ -304,12 +310,19 @@ function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
-function isPostgresUniqueViolation(error: unknown): boolean {
+function isUserPhoneUniqueViolation(error: unknown): boolean {
   let current = error
   const seen = new Set<unknown>()
   while (typeof current === 'object' && current !== null && !seen.has(current)) {
     seen.add(current)
-    if ('code' in current && current.code === '23505') return true
+    if (
+      'code' in current &&
+      current.code === '23505' &&
+      'constraint' in current &&
+      current.constraint === 'users_phone_number_unique'
+    ) {
+      return true
+    }
     current = 'cause' in current ? current.cause : undefined
   }
   return false

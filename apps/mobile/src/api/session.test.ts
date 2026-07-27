@@ -411,6 +411,53 @@ describe('SessionCoordinator authenticated requests', () => {
     expect(tokenStore.refreshToken).toBe('refresh-2')
     expect(session.getAccessToken()).toBeNull()
   })
+
+  it('does not let a stale retry 401 clear a later login', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    refresh.mockResolvedValue({
+      ...rotated,
+      accessToken: 'access-3',
+      refreshToken: 'refresh-3',
+    })
+    let rejectRetry!: (reason: unknown) => void
+    transport.request.mockImplementation(async (options: any) => {
+      if (options.auth.accessToken === 'access-2') throw apiError(401)
+      if (options.auth.accessToken === 'access-3') {
+        return new Promise((_resolve, reject) => {
+          rejectRetry = reject
+        })
+      }
+      return { ok: true }
+    })
+
+    const staleRequest = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(rejectRetry).toBeTypeOf('function'))
+    await session.accept({
+      ...rotated,
+      accessToken: 'access-login',
+      refreshToken: 'refresh-login',
+    })
+    rejectRetry(apiError(401))
+
+    await expect(staleRequest).rejects.toBeInstanceOf(ApiError)
+    expect(tokenStore.refreshToken).toBe('refresh-login')
+    expect(session.getAccessToken()).toBe('access-login')
+    await expect(
+      session.request({
+        method: 'GET',
+        path: '/auth/me',
+        responseSchema,
+      }),
+    ).resolves.toEqual({ ok: true })
+    expect(transport.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({ auth: { accessToken: 'access-login' } }),
+    )
+  })
 })
 
 describe('SessionCoordinator logout', () => {
@@ -440,7 +487,7 @@ describe('SessionCoordinator logout', () => {
     expect(session.getAccessToken()).toBe('access-login')
   })
 
-  it('does not let a stale terminal refresh failure clear a later login', async () => {
+  it('rejects a superseded terminal restore without clearing the later login', async () => {
     const { session, refresh, tokenStore } = setup()
     let rejectRefresh!: (reason: unknown) => void
     refresh.mockImplementation(
@@ -456,7 +503,11 @@ describe('SessionCoordinator logout', () => {
     })
     rejectRefresh(apiError(401, 'INVALID_REFRESH_TOKEN'))
 
-    await expect(restoring).resolves.toBeNull()
+    await expect(restoring).rejects.toMatchObject({
+      name: 'SessionRestoreError',
+      message: 'The persisted session could not be restored',
+      cause: expect.any(UnauthenticatedError),
+    })
     expect(tokenStore.refreshToken).toBe('refresh-login')
     expect(session.getAccessToken()).toBe('access-login')
   })

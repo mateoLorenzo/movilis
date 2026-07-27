@@ -1,4 +1,4 @@
-import { authSessions, otpChallenges } from '@movilis/db'
+import { authSessions, otpChallenges, users } from '@movilis/db'
 import {
   apiErrorSchema,
   authSessionSchema,
@@ -18,7 +18,7 @@ import {
   seedCity,
   seedUser,
 } from './fixtures.js'
-import { testDb } from './database.js'
+import { testDb, testPool } from './database.js'
 
 describe.sequential('authentication endpoint contracts', () => {
   let app: FastifyInstance
@@ -216,6 +216,45 @@ describe.sequential('authentication endpoint contracts', () => {
       code: 'USER_ALREADY_EXISTS',
       message: 'User already exists',
     })
+  })
+
+  it('rolls back the user when initial refresh-session creation fails', async () => {
+    await seedCity()
+    await testPool.query(`
+      CREATE FUNCTION test_fail_auth_session_insert() RETURNS trigger
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        RAISE EXCEPTION 'forced auth session insert failure';
+      END;
+      $$;
+      CREATE TRIGGER test_fail_auth_session_insert
+      BEFORE INSERT ON auth_sessions
+      FOR EACH ROW EXECUTE FUNCTION test_fail_auth_session_insert();
+    `)
+
+    try {
+      const onboardingToken = app.jwt.sign({
+        phoneNumber: '+541140392404',
+        tokenType: 'onboarding',
+      })
+      const response = await app.inject({
+        method: 'POST',
+        url: '/auth/signup/complete',
+        payload: { onboardingToken, fullName: 'Ada', cityId: 'city-1' },
+      })
+
+      expect(response.statusCode).toBe(500)
+      const createdUsers = await testDb
+        .select()
+        .from(users)
+        .where(eq(users.phoneNumber, '+541140392404'))
+      expect(createdUsers).toHaveLength(0)
+    } finally {
+      await testPool.query(`
+        DROP TRIGGER test_fail_auth_session_insert ON auth_sessions;
+        DROP FUNCTION test_fail_auth_session_insert();
+      `)
+    }
   })
 
   it('POST /auth/refresh rotates a session and rejects reuse', async () => {
