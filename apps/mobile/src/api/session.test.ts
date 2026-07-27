@@ -219,6 +219,66 @@ describe('SessionCoordinator authenticated requests', () => {
     expect(refresh).toHaveBeenCalledOnce()
   })
 
+  it('keeps failed concurrent 401 recovery single-flight through credential clearing', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    let rejectRefresh!: (reason: unknown) => void
+    refresh.mockImplementation(
+      () => new Promise((_resolve, reject) => (rejectRefresh = reject)),
+    )
+    let releaseDelete!: () => void
+    const deletePromise = new Promise<void>((resolve) => {
+      releaseDelete = () => {
+        tokenStore.refreshToken = null
+        resolve()
+      }
+    })
+    tokenStore.deleteRefreshToken.mockImplementation(() => deletePromise)
+
+    let rejectLate!: (reason: unknown) => void
+    transport.request.mockImplementation(async (options: any) => {
+      if (options.path === '/trips/mine') throw apiError(401)
+      return new Promise((_resolve, reject) => {
+        rejectLate = reject
+      })
+    })
+
+    const first = session.request({
+      method: 'GET',
+      path: '/trips/mine',
+      responseSchema,
+    })
+    const late = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+
+    rejectRefresh(new NetworkError('/auth/refresh'))
+    await vi.waitFor(() =>
+      expect(tokenStore.deleteRefreshToken).toHaveBeenCalledOnce(),
+    )
+    rejectLate(apiError(401))
+    releaseDelete()
+
+    const results = await Promise.allSettled([first, late])
+    expect(results).toEqual([
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.any(NetworkError),
+      }),
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.any(NetworkError),
+      }),
+    ])
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(tokenStore.deleteRefreshToken).toHaveBeenCalledOnce()
+    expect(tokenStore.refreshToken).toBeNull()
+    expect(session.getAccessToken()).toBeNull()
+  })
+
   it('reuses a rotated access token when a stale 401 arrives late', async () => {
     const { session, transport, refresh } = setup()
     await session.accept(rotated)
@@ -290,6 +350,38 @@ describe('SessionCoordinator authenticated requests', () => {
 })
 
 describe('SessionCoordinator logout', () => {
+  it('prevents an in-flight refresh from restoring credentials after logout', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    tokenStore.setRefreshToken.mockClear()
+    let releaseRefresh!: (value: AuthSession) => void
+    refresh.mockImplementation(
+      () => new Promise((resolve) => (releaseRefresh = resolve)),
+    )
+    transport.request.mockRejectedValueOnce(apiError(401))
+
+    const request = session.request({
+      method: 'GET',
+      path: '/auth/me',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+
+    await session.logout()
+    expect(session.getAccessToken()).toBeNull()
+    expect(tokenStore.refreshToken).toBeNull()
+
+    releaseRefresh({
+      ...rotated,
+      accessToken: 'access-3',
+      refreshToken: 'refresh-3',
+    })
+    await expect(request).rejects.toBeInstanceOf(UnauthenticatedError)
+    expect(tokenStore.setRefreshToken).not.toHaveBeenCalled()
+    expect(tokenStore.refreshToken).toBeNull()
+    expect(session.getAccessToken()).toBeNull()
+  })
+
   it('clears both local tokens even when revocation fails', async () => {
     const { session, revoke, tokenStore } = setup()
     await session.accept(rotated)

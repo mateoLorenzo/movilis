@@ -41,6 +41,8 @@ export function createSessionCoordinator({
 }: SessionDependencies): SessionCoordinator {
   let accessToken: string | null = null
   let refreshFlight: Promise<AuthSession> | null = null
+  let clearRefreshFailure = false
+  let sessionEpoch = 0
 
   async function clearCredentials(): Promise<void> {
     accessToken = null
@@ -53,20 +55,32 @@ export function createSessionCoordinator({
     return session.user
   }
 
-  async function refreshOnce(): Promise<AuthSession> {
+  async function refreshOnce(clearOnFailure = false): Promise<AuthSession> {
+    if (clearOnFailure) clearRefreshFailure = true
     if (refreshFlight) return refreshFlight
+    clearRefreshFailure = clearOnFailure
+    const refreshEpoch = sessionEpoch
     const flight = (async () => {
-      const refreshToken = await tokenStore.getRefreshToken()
-      if (!refreshToken) throw new UnauthenticatedError()
-      const next = await refresh(refreshToken)
-      await accept(next)
-      return next
+      try {
+        const refreshToken = await tokenStore.getRefreshToken()
+        if (!refreshToken) throw new UnauthenticatedError()
+        const next = await refresh(refreshToken)
+        if (sessionEpoch !== refreshEpoch) throw new UnauthenticatedError()
+        await accept(next)
+        return next
+      } catch (error) {
+        if (clearRefreshFailure) await clearCredentials()
+        throw error
+      }
     })()
     refreshFlight = flight
     try {
       return await flight
     } finally {
-      if (refreshFlight === flight) refreshFlight = null
+      if (refreshFlight === flight) {
+        refreshFlight = null
+        clearRefreshFailure = false
+      }
     }
   }
 
@@ -98,22 +112,12 @@ export function createSessionCoordinator({
 
   async function requireAccessToken(): Promise<string> {
     if (accessToken) return accessToken
-    try {
-      return (await refreshOnce()).accessToken
-    } catch (error) {
-      await clearCredentials()
-      throw error
-    }
+    return (await refreshOnce(true)).accessToken
   }
 
   async function recoverFrom401(rejectedToken: string): Promise<string> {
     if (accessToken && accessToken !== rejectedToken) return accessToken
-    try {
-      return (await refreshOnce()).accessToken
-    } catch (error) {
-      await clearCredentials()
-      throw error
-    }
+    return (await refreshOnce(true)).accessToken
   }
 
   async function request(
@@ -146,6 +150,7 @@ export function createSessionCoordinator({
   }
 
   async function logout(): Promise<void> {
+    sessionEpoch += 1
     let refreshToken: string | null = null
     try {
       refreshToken = await tokenStore.getRefreshToken()
