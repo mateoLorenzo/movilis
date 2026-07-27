@@ -45,6 +45,37 @@ describe('canonical error handling', () => {
     expect(safeParse(apiErrorSchema, response.json()).success).toBe(true)
   })
 
+  it('serializes Fastify validation errors with field-only details', async () => {
+    const app = await createTestApp()
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/otp/request',
+      payload: {},
+    })
+    const body = response.json()
+
+    expect(response.statusCode).toBe(400)
+    expect(body).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      message: 'Request validation failed',
+      requestId: response.headers['x-request-id'],
+      details: {
+        fields: [
+          {
+            path: 'body.phoneNumber',
+            message: expect.any(String),
+          },
+        ],
+      },
+    })
+    expect(Object.keys(body.details)).toEqual(['fields'])
+    expect(Object.keys(body.details.fields[0]).sort()).toEqual([
+      'message',
+      'path',
+    ])
+    expect(safeParse(apiErrorSchema, body).success).toBe(true)
+  })
+
   it('hides unexpected exception details and logs the original error', async () => {
     const app = await createTestApp()
     const log = vi.spyOn(app.log, 'error')

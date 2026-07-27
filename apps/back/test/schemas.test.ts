@@ -14,9 +14,11 @@ import {
   requestOtpRequestSchema,
   requestOtpResponseSchema,
   timestampSchema,
+  timestampWithOffsetPattern,
   verifyOtpRequestSchema,
   verifyOtpResponseSchema,
 } from '@movilis/shared'
+import * as v from 'valibot'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -40,6 +42,31 @@ describe('schema adapter', () => {
       type: 'string',
       format: 'date-time',
     })
+  })
+
+  it('preserves representable shared request constraints', () => {
+    expect(toFastifySchema(requestOtpRequestSchema)).toMatchObject({
+      additionalProperties: false,
+      properties: {
+        phoneNumber: { pattern: '^\\+[1-9]\\d{7,14}$' },
+      },
+    })
+    expect(toFastifySchema(createTripRequestSchema)).toMatchObject({
+      additionalProperties: false,
+      properties: {
+        departureAt: {
+          pattern: timestampWithOffsetPattern.source,
+          format: 'date-time',
+        },
+        totalSeats: { type: 'integer', minimum: 1, maximum: 8 },
+      },
+    })
+  })
+
+  it('rejects unsupported actions outside the explicit adapter allowlist', () => {
+    expect(() =>
+      toFastifySchema(v.pipe(v.string(), v.creditCard())),
+    ).toThrow(/credit.?card/i)
   })
 
   it('uses the canonical shared error schema for every error status', () => {
@@ -85,5 +112,23 @@ describe('schema adapter', () => {
       params: toFastifySchema(getUserByIdParamsSchema),
       response: { 200: toFastifySchema(getUserByIdResponseSchema) },
     })
+  })
+
+  it('declares canonical error responses for every existing route', () => {
+    const routeSchemas = [
+      requestOtpSchema,
+      verifyOtpSchema,
+      completeSignupSchema,
+      refreshSchema,
+      logoutSchema,
+      meSchema,
+      createTripSchema,
+      listMyTripsSchema,
+      getUserByIdSchema,
+    ]
+
+    for (const schema of routeSchemas) {
+      expect(schema.response).toMatchObject(errorResponses)
+    }
   })
 })

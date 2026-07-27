@@ -8,8 +8,9 @@ type ConvertibleSchema = Parameters<typeof toJsonSchema>[0]
 type JsonSchema = ReturnType<typeof toJsonSchema>
 
 export function toFastifySchema(schema: ConvertibleSchema): JsonSchema {
+  // Shared custom checks and finite guards have no JSON Schema action equivalent.
   return addTimestampFormats(
-    toJsonSchema(schema, { errorMode: 'ignore' }),
+    toJsonSchema(schema, { ignoreActions: ['check', 'finite'] }),
   ) as JsonSchema
 }
 

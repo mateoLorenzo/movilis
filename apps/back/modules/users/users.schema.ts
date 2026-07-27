@@ -3,11 +3,12 @@ import {
   getUserByIdResponseSchema,
 } from '@movilis/shared'
 
-import { toFastifySchema } from '../../schemas.js'
+import { errorResponses, toFastifySchema } from '../../schemas.js'
 
 export const getUserByIdSchema = {
   params: toFastifySchema(getUserByIdParamsSchema),
   response: {
+    ...errorResponses,
     200: toFastifySchema(getUserByIdResponseSchema),
   },
 }

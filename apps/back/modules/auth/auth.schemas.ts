@@ -11,11 +11,12 @@ import {
   verifyOtpResponseSchema,
 } from '@movilis/shared'
 
-import { toFastifySchema } from '../../schemas.js'
+import { errorResponses, toFastifySchema } from '../../schemas.js'
 
 export const requestOtpSchema = {
   body: toFastifySchema(requestOtpRequestSchema),
   response: {
+    ...errorResponses,
     200: toFastifySchema(requestOtpResponseSchema),
   },
 }
@@ -23,6 +24,7 @@ export const requestOtpSchema = {
 export const verifyOtpSchema = {
   body: toFastifySchema(verifyOtpRequestSchema),
   response: {
+    ...errorResponses,
     200: toFastifySchema(verifyOtpResponseSchema),
   },
 }
@@ -30,6 +32,7 @@ export const verifyOtpSchema = {
 export const completeSignupSchema = {
   body: toFastifySchema(completeSignupRequestSchema),
   response: {
+    ...errorResponses,
     200: toFastifySchema(completeSignupResponseSchema),
   },
 }
@@ -37,6 +40,7 @@ export const completeSignupSchema = {
 export const refreshSchema = {
   body: toFastifySchema(refreshRequestSchema),
   response: {
+    ...errorResponses,
     200: toFastifySchema(refreshResponseSchema),
   },
 }
@@ -44,12 +48,14 @@ export const refreshSchema = {
 export const logoutSchema = {
   body: toFastifySchema(logoutRequestSchema),
   response: {
+    ...errorResponses,
     204: { type: 'null' },
   },
 }
 
 export const meSchema = {
   response: {
+    ...errorResponses,
     200: toFastifySchema(getMeResponseSchema),
   },
 }
