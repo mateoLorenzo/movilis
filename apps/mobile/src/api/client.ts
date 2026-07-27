@@ -58,6 +58,13 @@ export function createHttpTransport({
   async function request(
     options: JsonRequestOptions<unknown> | EmptyRequestOptions,
   ): Promise<unknown> {
+    const headers: Record<string, string> = { Accept: 'application/json' }
+    if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+    if (options.auth) headers.Authorization = `Bearer ${options.auth.accessToken}`
+    const url = createRequestUrl(options.path, normalizedBaseUrl)
+    const requestBody =
+      options.body === undefined ? undefined : JSON.stringify(options.body)
+
     const controller = new AbortController()
     let abortKind: 'caller' | 'timeout' | null = null
     const timeoutMs = options.timeoutMs ?? defaultTimeoutMs
@@ -74,65 +81,56 @@ export function createHttpTransport({
       controller.abort()
     }, timeoutMs)
 
-    const headers: Record<string, string> = { Accept: 'application/json' }
-    if (options.body !== undefined) headers['Content-Type'] = 'application/json'
-    if (options.auth) headers.Authorization = `Bearer ${options.auth.accessToken}`
-
-    let response: Response
     try {
-      response = await fetch(
-        new URL(options.path.replace(/^\/+/, ''), normalizedBaseUrl).toString(),
-        {
+      let response: Response
+      try {
+        response = await fetch(url.toString(), {
           method: options.method,
           headers,
-          body:
-            options.body === undefined ? undefined : JSON.stringify(options.body),
+          body: requestBody,
           signal: controller.signal,
-        },
-      )
-    } catch (cause) {
-      if (abortKind === 'caller') {
-        throw new RequestCancelledError(options.path)
+        })
+      } catch (cause) {
+        throwAbortFailure(abortKind, options.path, timeoutMs)
+        throw new NetworkError(options.path, { cause })
       }
-      if (abortKind === 'timeout') {
-        throw new RequestTimeoutError(options.path, timeoutMs)
-      }
-      throw new NetworkError(options.path, { cause })
-    } finally {
-      clearTimeout(timeout)
-      options.signal?.removeEventListener('abort', cancelFromCaller)
-    }
 
-    if (!response.ok) {
+      if (!response.ok) {
+        let body: unknown
+        try {
+          body = await response.json()
+        } catch {
+          throwAbortFailure(abortKind, options.path, timeoutMs)
+          throw new ResponseContractError(response.status, options.path)
+        }
+        const parsed = v.safeParse(apiErrorSchema, body)
+        if (!parsed.success) {
+          throw new ResponseContractError(response.status, options.path)
+        }
+        throw new ApiError(response.status, parsed.output)
+      }
+
+      if (response.status === 204) return undefined
+      if (!('responseSchema' in options) || options.responseSchema === undefined) {
+        throw new ResponseContractError(response.status, options.path)
+      }
+
       let body: unknown
       try {
         body = await response.json()
       } catch {
+        throwAbortFailure(abortKind, options.path, timeoutMs)
         throw new ResponseContractError(response.status, options.path)
       }
-      const parsed = v.safeParse(apiErrorSchema, body)
+      const parsed = v.safeParse(options.responseSchema, body)
       if (!parsed.success) {
         throw new ResponseContractError(response.status, options.path)
       }
-      throw new ApiError(response.status, parsed.output)
+      return parsed.output
+    } finally {
+      clearTimeout(timeout)
+      options.signal?.removeEventListener('abort', cancelFromCaller)
     }
-
-    if (response.status === 204) return undefined
-    if (!('responseSchema' in options) || options.responseSchema === undefined) {
-      throw new ResponseContractError(response.status, options.path)
-    }
-
-    let body: unknown
-    try {
-      body = await response.json()
-    } catch {
-      throw new ResponseContractError(response.status, options.path)
-    }
-    const parsed = v.safeParse(options.responseSchema, body)
-    if (!parsed.success) {
-      throw new ResponseContractError(response.status, options.path)
-    }
-    return parsed.output
   }
 
   return { request } as HttpTransport
@@ -145,7 +143,7 @@ export function createExpoHttpTransport(): HttpTransport {
   })
 }
 
-function normalizeBaseUrl(value: string | undefined): string {
+function normalizeBaseUrl(value: string | undefined): URL {
   if (!value) {
     throw new ConfigurationError(
       'EXPO_PUBLIC_API_URL must be an absolute HTTP(S) URL',
@@ -165,5 +163,25 @@ function normalizeBaseUrl(value: string | undefined): string {
     )
   }
   if (!url.pathname.endsWith('/')) url.pathname += '/'
-  return url.toString()
+  return url
+}
+
+function createRequestUrl(path: string, baseUrl: URL): URL {
+  if (!path.startsWith('/') || path.startsWith('//')) {
+    throw new TypeError('Request path must be API-relative')
+  }
+  const url = new URL(path.slice(1), baseUrl)
+  if (url.origin !== baseUrl.origin) {
+    throw new TypeError('Request path must be API-relative')
+  }
+  return url
+}
+
+function throwAbortFailure(
+  abortKind: 'caller' | 'timeout' | null,
+  path: string,
+  timeoutMs: number,
+): void {
+  if (abortKind === 'caller') throw new RequestCancelledError(path)
+  if (abortKind === 'timeout') throw new RequestTimeoutError(path, timeoutMs)
 }

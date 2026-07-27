@@ -12,6 +12,32 @@ import { emptyResponse, fetchMock, jsonResponse } from './test-helpers'
 
 const resultSchema = v.object({ id: v.string() })
 
+function stalledJsonResponse(signal: AbortSignal | null | undefined) {
+  let markStarted: () => void
+  let rejectBody: (cause: unknown) => void = () => {}
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve
+  })
+  const response = jsonResponse({ id: 'user-1' })
+  vi.spyOn(response, 'json').mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectBody = reject
+        markStarted()
+        signal?.addEventListener(
+          'abort',
+          () => reject(new DOMException('Aborted', 'AbortError')),
+          { once: true },
+        )
+      }),
+  )
+  return {
+    response,
+    started,
+    release: () => rejectBody(new Error('release stalled body')),
+  }
+}
+
 describe('HttpTransport', () => {
   it.each([undefined, '', 'api.test', 'ftp://api.test'])(
     'rejects invalid base URL %s',
@@ -67,6 +93,58 @@ describe('HttpTransport', () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0]
     expect(init?.headers).toEqual({ Accept: 'application/json' })
+  })
+
+  it.each(['https://attacker.example/x', '//attacker.example/x'])(
+    'rejects non-API-relative path %s before fetch without leaking secrets',
+    async (path) => {
+      const fetch = fetchMock(async () => jsonResponse({ id: 'user-1' }))
+      const transport = createHttpTransport({
+        baseUrl: 'https://api.test/v1',
+        fetch,
+      })
+
+      const error = await transport
+        .request({
+          method: 'GET',
+          path,
+          auth: { accessToken: 'access-secret' },
+          responseSchema: resultSchema,
+        })
+        .catch((cause: unknown) => cause)
+
+      expect(error).toMatchObject({
+        name: 'TypeError',
+        message: 'Request path must be API-relative',
+      })
+      expect(String(error)).not.toContain(path)
+      expect(String(error)).not.toContain('access-secret')
+      expect(fetch).not.toHaveBeenCalled()
+    },
+  )
+
+  it('accepts a rooted API-relative path', async () => {
+    const fetch = fetchMock(async () => jsonResponse({ id: 'user-1' }))
+    const transport = createHttpTransport({
+      baseUrl: 'https://api.test/v1',
+      fetch,
+    })
+
+    await transport.request({
+      method: 'GET',
+      path: '/auth/me',
+      auth: { accessToken: 'access-secret' },
+      responseSchema: resultSchema,
+    })
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.test/v1/auth/me',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-secret',
+        }),
+      }),
+    )
   })
 
   it('validates success payloads and rejects malformed success JSON', async () => {
@@ -191,6 +269,31 @@ describe('HttpTransport', () => {
     expect(fetch).toHaveBeenCalledOnce()
   })
 
+  it('preserves JSON serialization failures without starting a fetch', async () => {
+    const fetch = fetchMock(async () => jsonResponse({ id: 'user-1' }))
+    const transport = createHttpTransport({
+      baseUrl: 'https://api.test',
+      fetch,
+    })
+    const body: { self?: unknown } = {}
+    body.self = body
+
+    const error = await transport
+      .request({
+        method: 'POST',
+        path: '/trips',
+        body,
+        auth: { accessToken: 'access-secret' },
+        responseSchema: resultSchema,
+      })
+      .catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(TypeError)
+    expect(error).not.toBeInstanceOf(NetworkError)
+    expect(String(error)).not.toContain('access-secret')
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('distinguishes caller cancellation from timeout', async () => {
     vi.useFakeTimers()
     const pendingFetch = fetchMock(
@@ -230,5 +333,64 @@ describe('HttpTransport', () => {
     await vi.advanceTimersByTimeAsync(15_000)
     await timeoutExpectation
     vi.useRealTimers()
+  })
+
+  it('keeps the timeout active while parsing the response body', async () => {
+    vi.useFakeTimers()
+    let body: ReturnType<typeof stalledJsonResponse>
+    const fetch = fetchMock(async (_url, init) => {
+      body = stalledJsonResponse(init?.signal)
+      return body.response
+    })
+    const transport = createHttpTransport({
+      baseUrl: 'https://api.test',
+      fetch,
+    })
+
+    const result = transport.request({
+      method: 'GET',
+      path: '/auth/me',
+      auth: false,
+      responseSchema: resultSchema,
+    })
+    const expectation = expect(result).rejects.toMatchObject({
+      name: 'RequestTimeoutError',
+      timeoutMs: 15_000,
+    })
+    await body!.started
+    await vi.advanceTimersByTimeAsync(15_000)
+    body!.release()
+
+    await expectation
+    vi.useRealTimers()
+  })
+
+  it('keeps caller cancellation active while parsing the response body', async () => {
+    let body: ReturnType<typeof stalledJsonResponse>
+    const fetch = fetchMock(async (_url, init) => {
+      body = stalledJsonResponse(init?.signal)
+      return body.response
+    })
+    const transport = createHttpTransport({
+      baseUrl: 'https://api.test',
+      fetch,
+    })
+    const caller = new AbortController()
+
+    const result = transport.request({
+      method: 'GET',
+      path: '/auth/me',
+      auth: false,
+      responseSchema: resultSchema,
+      signal: caller.signal,
+    })
+    const expectation = expect(result).rejects.toBeInstanceOf(
+      RequestCancelledError,
+    )
+    await body!.started
+    caller.abort()
+    body!.release()
+
+    await expectation
   })
 })
