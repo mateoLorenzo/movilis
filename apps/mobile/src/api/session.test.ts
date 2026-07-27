@@ -458,6 +458,70 @@ describe('SessionCoordinator authenticated requests', () => {
       expect.objectContaining({ auth: { accessToken: 'access-login' } }),
     )
   })
+
+  it('does not let a stale retry 401 clear a newer same-epoch rotation', async () => {
+    const { session, transport, refresh, tokenStore } = setup()
+    await session.accept(rotated)
+    refresh
+      .mockResolvedValueOnce({
+        ...rotated,
+        accessToken: 'access-3',
+        refreshToken: 'refresh-3',
+      })
+      .mockResolvedValueOnce({
+        ...rotated,
+        accessToken: 'access-4',
+        refreshToken: 'refresh-4',
+      })
+    let rejectStaleRetry!: (reason: unknown) => void
+    transport.request.mockImplementation(async (options: any) => {
+      const token = options.auth.accessToken
+      if (options.path === '/trips/mine' && token === 'access-2') {
+        throw apiError(401)
+      }
+      if (options.path === '/trips/mine' && token === 'access-3') {
+        return new Promise((_resolve, reject) => {
+          rejectStaleRetry = reject
+        })
+      }
+      if (options.path === '/auth/me' && token === 'access-3') {
+        throw apiError(401)
+      }
+      return { ok: true }
+    })
+
+    const staleRequest = session.request({
+      method: 'GET',
+      path: '/trips/mine',
+      responseSchema,
+    })
+    await vi.waitFor(() => expect(rejectStaleRetry).toBeTypeOf('function'))
+    await expect(
+      session.request({
+        method: 'GET',
+        path: '/auth/me',
+        responseSchema,
+      }),
+    ).resolves.toEqual({ ok: true })
+    expect(session.getAccessToken()).toBe('access-4')
+    expect(tokenStore.refreshToken).toBe('refresh-4')
+
+    rejectStaleRetry(apiError(401))
+    await expect(staleRequest).rejects.toBeInstanceOf(ApiError)
+    expect(session.getAccessToken()).toBe('access-4')
+    expect(tokenStore.refreshToken).toBe('refresh-4')
+    await expect(
+      session.request({
+        method: 'GET',
+        path: '/auth/me',
+        responseSchema,
+      }),
+    ).resolves.toEqual({ ok: true })
+    expect(transport.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({ auth: { accessToken: 'access-4' } }),
+    )
+    expect(refresh).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('SessionCoordinator logout', () => {

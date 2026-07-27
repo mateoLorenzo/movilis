@@ -183,7 +183,12 @@ export function createSessionCoordinator({
         auth: { accessToken: retryToken },
       } as JsonRequestOptions<unknown>)
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
+      if (
+        error instanceof ApiError &&
+        error.status === 401 &&
+        sessionEpoch === retryEpoch &&
+        accessToken === retryToken
+      ) {
         await clearCredentials(retryEpoch)
       }
       throw error
