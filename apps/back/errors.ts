@@ -21,6 +21,8 @@ const apiErrorStatusCodes = {
   CITY_NOT_FOUND: 404,
   USER_NOT_FOUND: 404,
   INVALID_DEPARTURE_TIME: 400,
+  SMS_DELIVERY_FAILED: 503,
+  OTP_SUPERSEDED: 409,
 } satisfies Record<ApiErrorCode, number>
 
 export class AppError extends Error {
@@ -70,7 +72,7 @@ export function registerErrorHandling(app: FastifyInstance) {
     }
 
     request.log.error(
-      { err: error, requestId: request.id },
+      { errorType: safeErrorType(error), requestId: request.id },
       'Unhandled request error',
     )
     return sendError(
@@ -80,6 +82,14 @@ export function registerErrorHandling(app: FastifyInstance) {
       'An unexpected error occurred',
     )
   })
+}
+
+export function safeErrorType(
+  error: unknown,
+): 'AppError' | 'Error' | 'UnknownError' {
+  if (error instanceof AppError) return 'AppError'
+  if (error instanceof Error) return 'Error'
+  return 'UnknownError'
 }
 
 function isRequestParsingError(error: unknown): error is FastifyError {

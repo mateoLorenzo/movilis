@@ -27,6 +27,8 @@ describe('@movilis/shared public exports', () => {
       'idSchema',
       'listMyTripsContract',
       'listMyTripsResponseSchema',
+      'logoutAllContract',
+      'logoutAllResponseSchema',
       'logoutBodySchema',
       'logoutContract',
       'logoutRequestSchema',
@@ -61,8 +63,11 @@ describe('@movilis/shared public exports', () => {
 
   it('parses an endpoint response through the package barrel', () => {
     expect(
-      v.parse(shared.requestOtpResponseSchema, { expiresInSeconds: 600 }),
-    ).toEqual({ expiresInSeconds: 600 })
+      v.parse(shared.requestOtpResponseSchema, {
+        expiresInSeconds: 600,
+        resendAfterSeconds: 60,
+      }),
+    ).toEqual({ expiresInSeconds: 600, resendAfterSeconds: 60 })
   })
 
   it('does not retain the legacy response envelope at runtime', () => {

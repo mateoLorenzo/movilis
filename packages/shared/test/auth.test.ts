@@ -7,6 +7,8 @@ import {
   completeSignupContract,
   completeSignupRequestSchema,
   completeSignupResponseSchema,
+  logoutAllContract,
+  logoutAllResponseSchema,
   logoutContract,
   logoutBodySchema,
   logoutRequestSchema,
@@ -48,15 +50,23 @@ describe('POST /auth/otp/request', () => {
     expect(
       v.parse(requestOtpRequestSchema, { phoneNumber: '+541140392404' }),
     ).toEqual({ phoneNumber: '+541140392404' })
-    expect(v.parse(requestOtpResponseSchema, { expiresInSeconds: 600 })).toEqual({
-      expiresInSeconds: 600,
-    })
     expect(
       v.parse(requestOtpResponseSchema, {
         expiresInSeconds: 600,
+        resendAfterSeconds: 60,
+      }),
+    ).toEqual({ expiresInSeconds: 600, resendAfterSeconds: 60 })
+    expect(
+      v.parse(requestOtpResponseSchema, {
+        expiresInSeconds: 600,
+        resendAfterSeconds: 60,
         devCode: '123456',
       }),
-    ).toEqual({ expiresInSeconds: 600, devCode: '123456' })
+    ).toEqual({
+      expiresInSeconds: 600,
+      resendAfterSeconds: 60,
+      devCode: '123456',
+    })
   })
 
   it.each([
@@ -67,10 +77,27 @@ describe('POST /auth/otp/request', () => {
   })
 
   it.each([
-    { expiresInSeconds: 0 },
-    { expiresInSeconds: 600.5 },
-    { expiresInSeconds: 600, devCode: '12345' },
-  ])('rejects invalid response %#', (response) => {
+    { expiresInSeconds: 0, resendAfterSeconds: 60 },
+    { expiresInSeconds: 600.5, resendAfterSeconds: 60 },
+  ])('rejects invalid expiry timer %#', (response) => {
+    expect(v.safeParse(requestOtpResponseSchema, response).success).toBe(false)
+  })
+
+  it.each([
+    { expiresInSeconds: 600 },
+    { expiresInSeconds: 600, resendAfterSeconds: 0 },
+    { expiresInSeconds: 600, resendAfterSeconds: 60.5 },
+  ])('rejects invalid resend timer %#', (response) => {
+    expect(v.safeParse(requestOtpResponseSchema, response).success).toBe(false)
+  })
+
+  it('rejects an invalid development code', () => {
+    const response = {
+      expiresInSeconds: 600,
+      resendAfterSeconds: 60,
+      devCode: '12345',
+    }
+
     expect(v.safeParse(requestOtpResponseSchema, response).success).toBe(false)
   })
 })
@@ -172,6 +199,12 @@ describe('refresh, logout, me, and contract wiring', () => {
     expect(logoutContract.success).toBe(logoutResponseSchema)
   })
 
+  it('defines logout-all as a bodyless request with a null response', () => {
+    expect(v.parse(logoutAllResponseSchema, null)).toBeNull()
+    expect(logoutAllContract.request).toBeNull()
+    expect(logoutAllContract.success).toBe(logoutAllResponseSchema)
+  })
+
   it('pairs every endpoint with its exact success and canonical error', () => {
     expect(requestOtpContract.request).toBe(requestOtpRequestSchema)
     expect(requestOtpBodySchema).toBe(requestOtpRequestSchema)
@@ -194,6 +227,7 @@ describe('refresh, logout, me, and contract wiring', () => {
       completeSignupContract,
       refreshContract,
       logoutContract,
+      logoutAllContract,
       getMeContract,
     ]) {
       expect(contract.error).toBe(apiErrorSchema)

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import * as v from 'valibot'
 
-import { apiErrorSchema } from '../src/primitives/error.js'
+import {
+  apiErrorCodeSchema,
+  apiErrorSchema,
+} from '../src/primitives/error.js'
 
 const commonCodes = [
   'VALIDATION_ERROR',
@@ -21,9 +24,18 @@ const domainCodes = [
   'CITY_NOT_FOUND',
   'USER_NOT_FOUND',
   'INVALID_DEPARTURE_TIME',
+  'SMS_DELIVERY_FAILED',
+  'OTP_SUPERSEDED',
 ] as const
 
 describe('apiErrorSchema', () => {
+  it.each(['SMS_DELIVERY_FAILED', 'OTP_SUPERSEDED'] as const)(
+    'parses authentication error code %s directly',
+    (code) => {
+      expect(v.parse(apiErrorCodeSchema, code)).toBe(code)
+    },
+  )
+
   it.each([...commonCodes, ...domainCodes])('accepts declared code %s', (code) => {
     expect(
       v.parse(apiErrorSchema, {

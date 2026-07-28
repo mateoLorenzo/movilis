@@ -8,6 +8,7 @@ import {
   getUserByIdParamsSchema,
   getUserByIdResponseSchema,
   listMyTripsResponseSchema,
+  logoutAllResponseSchema,
   logoutRequestSchema,
   logoutResponseSchema,
   refreshRequestSchema,
@@ -24,6 +25,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   completeSignupSchema,
+  logoutAllSchema,
   logoutSchema,
   meSchema,
   refreshSchema,
@@ -80,6 +82,7 @@ describe('schema adapter', () => {
       409: expected,
       429: expected,
       500: expected,
+      503: expected,
     })
   })
 
@@ -104,6 +107,9 @@ describe('schema adapter', () => {
       body: toFastifySchema(logoutRequestSchema),
       response: { 204: toFastifySchema(logoutResponseSchema) },
     })
+    expect(logoutAllSchema).toMatchObject({
+      response: { 204: toFastifySchema(logoutAllResponseSchema) },
+    })
     expect(meSchema.response[200]).toEqual(toFastifySchema(getMeResponseSchema))
     expect(createTripSchema).toMatchObject({
       body: toFastifySchema(createTripRequestSchema),
@@ -125,6 +131,7 @@ describe('schema adapter', () => {
       completeSignupSchema,
       refreshSchema,
       logoutSchema,
+      logoutAllSchema,
       meSchema,
       createTripSchema,
       listMyTripsSchema,
