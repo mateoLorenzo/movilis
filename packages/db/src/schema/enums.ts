@@ -1,5 +1,20 @@
 import { pgEnum } from 'drizzle-orm/pg-core'
 
+export const otpChallengePurpose = pgEnum('otp_challenge_purpose', [
+  'login',
+  'phone_change_current',
+  'phone_change_new',
+  'account_deletion',
+])
+
+export const otpChallengeStatus = pgEnum('otp_challenge_status', [
+  'pending',
+  'deliverable',
+  'consumed',
+  'superseded',
+  'delivery_failed',
+])
+
 /** Mobile platforms supported for push notification delivery. */
 export const devicePlatformEnum = pgEnum('device_platform', ['ios', 'android'])
 
