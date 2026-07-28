@@ -31,6 +31,8 @@ describe.sequential('central status and code mapping', () => {
     ['CITY_NOT_FOUND', 404, 'City not found'],
     ['USER_NOT_FOUND', 404, 'User not found'],
     ['INVALID_DEPARTURE_TIME', 400, 'Departure date must be in the future'],
+    ['SMS_DELIVERY_FAILED', 503, 'SMS delivery failed'],
+    ['OTP_SUPERSEDED', 409, 'OTP request was superseded'],
   ] satisfies Array<[ApiErrorCode, number, string]>)(
     '%s maps to HTTP %i',
     async (code, statusCode, message) => {

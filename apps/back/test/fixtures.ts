@@ -2,9 +2,20 @@ import { cities, users } from '@movilis/db'
 import type { FastifyInstance } from 'fastify'
 
 import { buildApp } from '../app.js'
+import type { AuthSecurityConfig } from '../config.js'
+import { developmentSmsSender } from '../modules/auth/development.sms-sender.js'
+import type { SmsSender } from '../modules/auth/sms.sender.js'
 import { testDb } from './database.js'
 
-export async function createIntegrationApp(): Promise<FastifyInstance> {
+type IntegrationAppOptions = {
+  authConfig?: Partial<AuthSecurityConfig>
+  smsSender?: SmsSender
+  trustedProxies?: string[]
+}
+
+export async function createIntegrationApp(
+  options: IntegrationAppOptions = {},
+): Promise<FastifyInstance> {
   return buildApp({
     db: testDb,
     jwtSecret: 'integration-test-secret',
@@ -13,7 +24,23 @@ export async function createIntegrationApp(): Promise<FastifyInstance> {
       refreshTokenTtlSeconds: 2_592_000,
       otpTtlSeconds: 600,
       exposeDevOtpCode: true,
+      otpCodeHmacSecret: 'integration-otp-secret',
+      rateLimitHmacSecret: 'integration-rate-limit-secret',
+      resendCooldownSeconds: 60,
+      phoneWindowSeconds: 900,
+      phoneWindowMaxRequests: 3,
+      ipWindowSeconds: 900,
+      ipWindowMaxRequests: 10,
+      deviceWindowSeconds: 900,
+      deviceWindowMaxRequests: 5,
+      maxOtpAttempts: 3,
+      otpRetentionSeconds: 86_400,
+      sessionRetentionSeconds: 2_592_000,
+      cleanupBatchSize: 500,
+      ...options.authConfig,
     },
+    smsSender: options.smsSender ?? developmentSmsSender,
+    trustedProxies: options.trustedProxies ?? [],
     logger: false,
   })
 }
@@ -60,16 +87,22 @@ export function accessToken(app: FastifyInstance, userId: string) {
 export async function requestOtp(
   app: FastifyInstance,
   phoneNumber = '+541140392404',
+  deviceId?: string,
 ) {
   const response = await app.inject({
     method: 'POST',
     url: '/auth/otp/request',
+    headers: deviceId ? { 'x-device-id': deviceId } : undefined,
     payload: { phoneNumber },
   })
   if (response.statusCode !== 200) {
     throw new Error(`OTP request failed: ${response.statusCode} ${response.body}`)
   }
-  return response.json<{ expiresInSeconds: number; devCode: string }>()
+  return response.json<{
+    expiresInSeconds: number
+    resendAfterSeconds: number
+    devCode: string
+  }>()
 }
 
 export async function completeSignup(

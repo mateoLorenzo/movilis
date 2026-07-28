@@ -40,4 +40,5 @@ export const errorResponses = {
   409: canonicalError,
   429: canonicalError,
   500: canonicalError,
+  503: canonicalError,
 } as const

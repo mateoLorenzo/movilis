@@ -15,6 +15,8 @@ export const apiErrorCodeSchema = v.picklist([
   'CITY_NOT_FOUND',
   'USER_NOT_FOUND',
   'INVALID_DEPARTURE_TIME',
+  'SMS_DELIVERY_FAILED',
+  'OTP_SUPERSEDED',
 ])
 
 export type ApiErrorCode = v.InferOutput<typeof apiErrorCodeSchema>

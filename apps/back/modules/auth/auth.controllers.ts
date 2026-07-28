@@ -20,11 +20,17 @@ export async function requestOtp(
 ) {
   const otp = await authService.requestOtp(
     request.server.db,
-    request.body.phoneNumber,
-    request.server.authConfig.otpTtlSeconds,
+    request.server.smsSender,
+    {
+      phoneNumber: request.body.phoneNumber,
+      ipAddress: request.ip,
+      deviceId: deviceId(request),
+    },
+    request.server.authConfig,
   )
   return reply.send({
-    expiresInSeconds: request.server.authConfig.otpTtlSeconds,
+    expiresInSeconds: otp.expiresInSeconds,
+    resendAfterSeconds: otp.resendAfterSeconds,
     ...(request.server.authConfig.exposeDevOtpCode ? { devCode: otp.code } : {}),
   })
 }
@@ -37,7 +43,7 @@ export async function verifyOtp(
     request.server.db,
     request.body.phoneNumber,
     request.body.code,
-    request.server.authConfig.refreshTokenTtlSeconds,
+    request.server.authConfig,
   )
   if (result.type === 'requiresSignup') {
     const body: VerifyOtpResponse = {
@@ -53,6 +59,11 @@ export async function verifyOtp(
     status: 'authenticated',
     ...createAuthSession(request, result.user, result.refreshToken),
   } satisfies VerifyOtpResponse)
+}
+
+function deviceId(request: FastifyRequest): string | undefined {
+  const value = request.headers['x-device-id']
+  return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
 export async function completeSignup(
@@ -104,6 +115,16 @@ export async function logout(
   reply: FastifyReply,
 ) {
   await authService.logout(request.server.db, request.body.refreshToken)
+  return reply.code(204).send()
+}
+
+export async function logoutAll(request: FastifyRequest, reply: FastifyReply) {
+  const userId = await requireAccessUserId(request)
+  const user = await authService.getActiveUserById(request.server.db, userId)
+  if (!user) {
+    throw new AppError('UNAUTHENTICATED', 'Authentication required')
+  }
+  await authService.logoutAll(request.server.db, user.id)
   return reply.code(204).send()
 }
 

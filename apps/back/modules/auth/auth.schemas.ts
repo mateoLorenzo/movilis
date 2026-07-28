@@ -1,6 +1,7 @@
 import {
   authSessionSchema,
   completeSignupRequestSchema,
+  logoutAllResponseSchema,
   logoutRequestSchema,
   logoutResponseSchema,
   privateUserSchema,
@@ -36,6 +37,10 @@ export const refreshSchema = {
 export const logoutSchema = {
   body: toFastifySchema(logoutRequestSchema),
   response: { 204: toFastifySchema(logoutResponseSchema), ...errorResponses },
+}
+
+export const logoutAllSchema = {
+  response: { 204: toFastifySchema(logoutAllResponseSchema), ...errorResponses },
 }
 
 export const meSchema = {

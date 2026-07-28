@@ -5,7 +5,7 @@ import { startServer } from './server.js'
 
 try {
   await startServer(loadConfig(process.env))
-} catch (error) {
-  console.error(error)
+} catch {
+  console.error('Backend startup failed')
   process.exitCode = 1
 }

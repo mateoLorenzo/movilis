@@ -19,6 +19,7 @@ export type RequestOtpBody = v.InferOutput<typeof requestOtpBodySchema>
 
 export const requestOtpResponseSchema = v.strictObject({
   expiresInSeconds: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  resendAfterSeconds: v.pipe(v.number(), v.integer(), v.minValue(1)),
   devCode: v.optional(otpCodeSchema),
 })
 export type RequestOtpResponse = v.InferOutput<typeof requestOtpResponseSchema>
@@ -91,6 +92,9 @@ export type LogoutBody = v.InferOutput<typeof logoutBodySchema>
 export const logoutResponseSchema = v.null()
 export type LogoutResponse = v.InferOutput<typeof logoutResponseSchema>
 
+export const logoutAllResponseSchema = v.null()
+export type LogoutAllResponse = v.InferOutput<typeof logoutAllResponseSchema>
+
 export const requestOtpContract = {
   request: requestOtpRequestSchema,
   success: requestOtpResponseSchema,
@@ -118,5 +122,11 @@ export const refreshContract = {
 export const logoutContract = {
   request: logoutRequestSchema,
   success: logoutResponseSchema,
+  error: apiErrorSchema,
+} as const
+
+export const logoutAllContract = {
+  request: null,
+  success: logoutAllResponseSchema,
   error: apiErrorSchema,
 } as const
